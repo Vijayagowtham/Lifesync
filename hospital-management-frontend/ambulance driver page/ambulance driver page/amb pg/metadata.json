@@ -1,0 +1,5 @@
+{
+  "name": "LifeSync",
+  "description": "Modern Ambulance Driver Dashboard for healthcare emergency platforms.",
+  "requestFramePermissions": ["geolocation"]
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import Home from './pages/Home';
@@ -10,8 +10,9 @@ import Appointments from './pages/Appointments';
 import Availability from './pages/Availability';
 import Ambulance from './pages/Ambulance';
 import AmbulanceDriver from './pages/AmbulanceDriver';
+import AuthPage, { getSession, clearSession } from './pages/AuthPage';
 
-function AppShell() {
+function AppShell({ user, onLogout }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const isDriverPage = location.pathname === '/ambulance-driver';
@@ -26,10 +27,10 @@ function AppShell() {
         />
       )}
 
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} user={user} onLogout={onLogout} />
 
       <div className="main-content">
-        <Topbar onToggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
+        <Topbar onToggleSidebar={() => setSidebarOpen(!isSidebarOpen)} user={user} onLogout={onLogout} />
         <div className={isDriverPage ? '' : 'page-wrapper'}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -55,9 +56,26 @@ function AppShell() {
 }
 
 export default function App() {
+  const [user, setUser] = useState(() => getSession());
+
+  function handleAuth(userData) {
+    setUser(userData);
+  }
+
+  function handleLogout() {
+    clearSession();
+    setUser(null);
+  }
+
   return (
     <BrowserRouter>
-      <AppShell />
+      {user ? (
+        <AppShell user={user} onLogout={handleLogout} />
+      ) : (
+        <Routes>
+          <Route path="*" element={<AuthPage onAuth={handleAuth} />} />
+        </Routes>
+      )}
     </BrowserRouter>
   );
 }

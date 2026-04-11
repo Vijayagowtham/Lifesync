@@ -1,7 +1,6 @@
 import { useLocation, Link } from 'react-router-dom';
-import { Bell, Clock, Activity, Menu, Hospital } from 'lucide-react';
+import { Bell, Clock, Activity, Menu, Hospital, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabase';
 
 const pageTitles = {
   '/': 'Dashboard',
@@ -14,31 +13,15 @@ const pageTitles = {
   '/ambulance-driver': 'Driver Dashboard',
 };
 
-export default function Topbar({ onToggleSidebar }) {
+export default function Topbar({ onToggleSidebar, user, onLogout }) {
   const location = useLocation();
   const title = pageTitles[location.pathname] || 'LifeSync';
   const [time, setTime] = useState(new Date());
-  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
-
-  useEffect(() => {
-    loadProfile();
-    const channel = supabase.channel('realtime-topbar-hospital')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'hospitals' }, () => {
-        loadProfile();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
-
-  async function loadProfile() {
-    const { data } = await supabase.from('hospitals').select('name, logo_url').order('id', { ascending: true }).limit(1).single();
-    if (data) setProfile(data);
-  }
 
   return (
     <header className="topbar">
@@ -64,6 +47,7 @@ export default function Topbar({ onToggleSidebar }) {
 
         <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 4px' }}></div>
 
+        {/* Hospital profile pill */}
         <Link to="/hospital" style={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -78,13 +62,12 @@ export default function Topbar({ onToggleSidebar }) {
         }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
-        title="Edit Profile"
+        title="View Profile"
         >
           <div style={{
             width: 32,
             height: 32,
             borderRadius: '50%',
-            overflow: 'hidden',
             background: 'var(--primary-glow)',
             color: 'var(--primary)',
             display: 'flex',
@@ -92,21 +75,30 @@ export default function Topbar({ onToggleSidebar }) {
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            {profile?.logo_url ? (
-              <img src={profile.logo_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <Hospital size={16} />
-            )}
+            <Hospital size={16} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '120px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '140px' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {profile?.name || 'LifeSync Hospital'}
+              {user?.hospitalName || 'LifeSync Hospital'}
             </span>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Profile
+              {user?.email || 'Hospital Admin'}
             </span>
           </div>
         </Link>
+
+        {/* Logout button */}
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            title="Log out"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#fff1f2'; e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            <LogOut size={15} /> Logout
+          </button>
+        )}
       </div>
     </header>
   );

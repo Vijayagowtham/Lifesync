@@ -15,7 +15,7 @@ const navItems = [
   { to: '/ambulance-driver', icon: Users, label: 'Driver Dashboard' },
 ];
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, onClose, user, onLogout }) {
   const handleNavClick = () => {
     if (window.innerWidth <= 768) {
       onClose();
@@ -62,7 +62,7 @@ export default function Sidebar({ isOpen, onClose }) {
           className="nav-item" 
           onClick={() => {
             if (confirm('Are you sure you want to logout?')) {
-              window.location.reload(); // Simple simulated logout
+              onLogout && onLogout();
             }
           }}
           style={{ width: 'calc(100% - 24px)', margin: '0 12px 12px', color: 'var(--danger)' }}
@@ -77,7 +77,7 @@ export default function Sidebar({ isOpen, onClose }) {
           © 2026 LifeSync
         </div>
         <div style={{ marginTop: 4, color: 'var(--accent)', fontSize: '0.7rem', fontWeight: 600 }}>
-          v1.0.0 • Live
+          {user?.hospitalName ? `${user.hospitalName}` : 'LifeSync Hospital'}
         </div>
       </div>
     </aside>

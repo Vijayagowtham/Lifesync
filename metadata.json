@@ -1,0 +1,5 @@
+{
+  "name": "Life Sync",
+  "description": "A modern healthcare dashboard for finding hospitals, tracking ambulances, and AI-powered medical assistance.",
+  "requestFramePermissions": ["microphone"]
+}

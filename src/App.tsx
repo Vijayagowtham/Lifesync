@@ -41,6 +41,7 @@ import Dashboard from "./pages/Dashboard";
 import HospitalStatus from "./pages/HospitalStatus";
 import LiveMap from "./pages/LiveMap";
 import AmbulancePanel from "./pages/AmbulancePanel";
+import AuthPage from "./pages/AuthPage";
 
 type Page = "dashboard" | "hospitals" | "map" | "ambulance";
 type LocationStatus = "pending" | "requesting" | "granted" | "denied" | "unavailable";
@@ -51,20 +52,6 @@ const DEFAULT_PROFILE: UserProfile = {
   email: "alex.johnson@lifesync.health",
   avatarUrl: "https://picsum.photos/seed/user/100/100",
 };
-
-function loadProfile(): UserProfile {
-  try {
-    const stored = localStorage.getItem("lifesync_profile");
-    if (stored) return { ...DEFAULT_PROFILE, ...JSON.parse(stored) };
-  } catch {
-    /* ignore */
-  }
-  return DEFAULT_PROFILE;
-}
-
-function saveProfileToStorage(p: UserProfile) {
-  localStorage.setItem("lifesync_profile", JSON.stringify(p));
-}
 
 // ─── Location Permission Gate ─────────────────────────────────────────────────
 function LocationGate({
@@ -177,6 +164,16 @@ function LocationGate({
 export default function App() {
   const [activePage, setActivePage] = useState<Page>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // ── Authentication ──
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem("lifesync_auth") === "true";
+  });
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    const stored = localStorage.getItem("lifesync_profile");
+    return stored ? JSON.parse(stored) : DEFAULT_PROFILE;
+  });
+
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [ambulances, setAmbulances] = useState<Ambulance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -185,10 +182,15 @@ export default function App() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("pending");
 
-  // ── Profile & Chat ──
-  const [profile, setProfile] = useState<UserProfile>(loadProfile);
   const [profileOpen, setProfileOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+
+  const handleLogin = (userData: UserProfile) => {
+    setIsLoggedIn(true);
+    setProfile(userData);
+    localStorage.setItem("lifesync_auth", "true");
+    localStorage.setItem("lifesync_profile", JSON.stringify(userData));
+  };
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -242,14 +244,17 @@ export default function App() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.clear();
+    localStorage.removeItem("lifesync_auth");
+    localStorage.removeItem("lifesync_profile");
     sessionStorage.clear();
-    window.location.href = "/";
+    setIsLoggedIn(false);
+    setUserLocation(null);
+    setLocationStatus("pending");
   };
 
   const handleProfileSave = (updated: UserProfile) => {
     setProfile(updated);
-    saveProfileToStorage(updated);
+    localStorage.setItem("lifesync_profile", JSON.stringify(updated));
   };
 
   // Initials for avatar fallback
@@ -266,6 +271,11 @@ export default function App() {
     { id: "map",       label: "Live Map",         icon: MapIcon },
     { id: "ambulance", label: "Ambulance Info",  icon: AmbulanceIcon },
   ];
+
+  // Show Login if not authenticated
+  if (!isLoggedIn) {
+    return <AuthPage onLogin={handleLogin} />;
+  }
 
   // Show location gate until granted
   if (locationStatus !== "granted") {

@@ -225,12 +225,16 @@ export default function App() {
     setLocationStatus("requesting");
   }, []);
 
+  // Fetch hospitals & ambulances based on user location
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const params = userLocation
+          ? `?lat=${userLocation[0]}&lng=${userLocation[1]}`
+          : "";
         const [hospRes, ambRes] = await Promise.all([
-          fetch("/api/hospitals"),
-          fetch("/api/ambulances"),
+          fetch(`/api/hospitals${params}`),
+          fetch(`/api/ambulances${params}`),
         ]);
         setHospitals(await hospRes.json());
         setAmbulances(await ambRes.json());
@@ -241,7 +245,9 @@ export default function App() {
       }
     };
     fetchData();
-  }, []);
+    // Re-fetch only when userLocation is first established (null -> value)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLocation !== null]);
 
   const handleLogout = () => {
     localStorage.removeItem("lifesync_auth");

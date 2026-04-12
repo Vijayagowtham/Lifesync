@@ -79,25 +79,18 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
+          options: {
+            data: {
+              username: formData.username || formData.name,
+              hospitalName: formData.hospitalName,
+              role: role,
+            }
+          }
         });
 
         if (authError) throw authError;
-
-        if (authData.user) {
-          // 2. Create profile
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: authData.user.id,
-              name: role === "user" ? (formData.username || formData.name) : formData.hospitalName,
-              email: formData.email,
-              role: role,
-              avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.email}`
-            });
-
-          if (profileError) throw profileError;
-        }
-
+        
+        // Manual profile creation removed: Handled by DB trigger for robustness.
         setIsSignupSuccess(true);
       } else {
         // 1. Sign in
@@ -140,7 +133,12 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
         }
       }
     } catch (err: any) {
-      setError(err.message || "Authentication failed.");
+      console.error("Auth Error:", err);
+      if (err.message === "Failed to fetch" || err.name === "TypeError") {
+        setError("Network error: Could not reach Supabase. Please check your internet connection and ensure your Supabase project is active.");
+      } else {
+        setError(err.message || "Authentication failed.");
+      }
     } finally {
       setLoading(false);
     }

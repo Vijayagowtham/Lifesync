@@ -17,6 +17,28 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Function to handle new user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, name, email, role, avatar_url)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data->>'username', new.raw_user_meta_data->>'hospitalName', split_part(new.email, '@', 1)),
+    new.email,
+    COALESCE(new.raw_user_meta_data->>'role', 'user'),
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=' || new.email
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to call the function on signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 CREATE TABLE IF NOT EXISTS public.hospitals (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -63,6 +85,7 @@ ALTER TABLE public.ambulance_requests ENABLE ROW LEVEL SECURITY;
 -- 4. POLICIES
 CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "Users can update their own profiles" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Allow system to insert profiles" ON public.profiles FOR INSERT WITH CHECK (true);
 CREATE POLICY "Anyone can view hospitals" ON public.hospitals FOR SELECT USING (true);
 CREATE POLICY "Anyone can view ambulance requests" ON public.ambulance_requests FOR SELECT USING (true);
 CREATE POLICY "Anyone can create ambulance requests" ON public.ambulance_requests FOR INSERT WITH CHECK (true);

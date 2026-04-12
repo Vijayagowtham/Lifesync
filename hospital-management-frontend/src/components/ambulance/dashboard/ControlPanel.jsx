@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Power, ListFilter, AlertCircle, History, ClipboardList, BookOpen } from 'lucide-react';
+import { Power, ListFilter, AlertCircle, History, ClipboardList, BookOpen, Shield, Radar, Wifi, MapPin } from 'lucide-react';
 import { RideCard } from './RideCard';
 import { RequestCard } from './RequestCard';
 import { ProtocolModal } from './ProtocolModal';
-import { LocationManager } from './LocationManager';
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '../../../lib/ambulance/utils';
 
 export const ControlPanel = ({
@@ -21,156 +20,174 @@ export const ControlPanel = ({
   const [isProtocolModalOpen, setProtocolModalOpen] = useState(false);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-white">
+    <div className="flex flex-col max-h-[85vh] h-[580px] bg-[#0f1115] text-white overflow-hidden rounded-[32px] border border-white/10 shadow-2xl">
       
-      {/* Top Header Section with Status & Tabs */}
-      <div className="flex flex-col shrink-0 border-b border-slate-100 p-5 space-y-5">
-        
-        {/* Status Toggle Button */}
+      {/* ── Header: Operation Status ── */}
+      <div className="p-6 pb-4 flex items-center justify-between border-b border-white/5 shrink-0">
+        <div>
+           <div className="flex items-center gap-2 mb-1">
+              <div className={cn("w-2 h-2 rounded-full", isOnline ? "bg-emerald-500 shadow-[0_0_10px_#10b981]" : "bg-white/20")} />
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Network Status</p>
+           </div>
+           <h2 className="text-xl font-black tracking-tight">{isOnline ? "OPERATIONAL" : "STANDBY"}</h2>
+        </div>
         <button
           onClick={onToggleOnline}
           className={cn(
-            "w-full p-4 rounded-2xl flex items-center justify-between transition-all duration-300 shadow-sm border",
-            isOnline
-              ? "bg-emerald-500 border-emerald-400 text-white shadow-emerald-200/50 hover:bg-emerald-600"
-              : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-white"
+            "p-4 rounded-2xl transition-all duration-500 group",
+            isOnline 
+              ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-500" 
+              : "bg-white/5 border border-white/10 text-white/30"
           )}
         >
-          <div className="flex items-center gap-4">
-            <div className={cn("p-2.5 rounded-xl transition-colors", isOnline ? "bg-white/20" : "bg-slate-200")}>
-              <Power className={cn("w-5 h-5", isOnline ? "text-white" : "text-slate-500")} />
-            </div>
-            <div className="text-left">
-              <p className={cn("text-[10px] font-bold uppercase tracking-widest mb-0.5", isOnline ? "text-emerald-100" : "text-slate-400")}>System Status</p>
-              <p className="text-base font-bold leading-tight">{isOnline ? "Active & Online" : "System Offline"}</p>
-            </div>
-          </div>
-          {/* Toggle pill */}
-          <div className={cn("w-12 h-6 rounded-full relative transition-colors flex-shrink-0 border", isOnline ? "bg-emerald-600 border-emerald-400" : "bg-slate-300 border-slate-400")}>
-            <div className={cn("absolute top-[1px] w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-300", isOnline ? "right-[1px]" : "left-[1px]")} />
-          </div>
-        </button>
-
-        {/* Tab Switcher */}
-        <div className="flex gap-1.5 bg-slate-100/80 p-1.5 rounded-xl border border-slate-200/60">
-          <button
-            onClick={() => setActiveTab('current')}
-            className={cn(
-              "flex-1 py-2.5 text-[13px] font-bold rounded-lg transition-all duration-200",
-              activeTab === 'current'
-                ? "bg-white text-red-600 shadow-sm border border-slate-200/50"
-                : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
-            )}
-          >
-            Dashboard
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={cn(
-              "flex-1 py-2.5 text-[13px] font-bold rounded-lg transition-all duration-200",
-              activeTab === 'history'
-                ? "bg-white text-red-600 shadow-sm border border-slate-200/50"
-                : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
-            )}
-          >
-            History
-          </button>
-        </div>
-
-        {/* Emergency Protocols Button */}
-        <button
-          onClick={() => setProtocolModalOpen(true)}
-          className="w-full py-3 text-[13px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all duration-200 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white hover:border-red-600 hover:shadow-md hover:shadow-red-200/50"
-        >
-          <BookOpen className="w-4 h-4" />
-          Emergency Protocols
+          <Power className={cn("w-6 h-6 transition-transform group-active:scale-90", isOnline && "drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]")} />
         </button>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-5">
-        <LocationManager onLocationUpdate={updateDriverLocation} />
+      {/* ── Operation Tabs ── */}
+      <div className="flex border-b border-white/5 shrink-0">
+        <button
+          onClick={() => setActiveTab('current')}
+          className={cn(
+            "flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all",
+            activeTab === 'current' ? "text-white bg-white/5 border-b-2 border-red-500" : "text-white/30 hover:text-white/60"
+          )}
+        >
+          Mission Control
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={cn(
+            "flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all",
+            activeTab === 'history' ? "text-white bg-white/5 border-b-2 border-red-500" : "text-white/30 hover:text-white/60"
+          )}
+        >
+          Archive
+        </button>
+      </div>
 
-        {activeTab === 'current' ? (
-          <>
-            {/* Active Mission */}
-            {isOnline && activeRide && (
-              <section>
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-                  <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Mission</h2>
-                </div>
-                <RideCard ride={activeRide} onComplete={onCompleteRide} />
-              </section>
-            )}
+      {/* ── Mission Control Content ── */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide">
+        <AnimatePresence mode="wait">
+          {activeTab === 'current' ? (
+            <motion.div 
+               key="current"
+               initial={{ opacity: 0, y: 10 }}
+               animate={{ opacity: 1, y: 0 }}
+               exit={{ opacity: 0, y: -10 }}
+               className="space-y-6"
+            >
+              {/* Active Mission HUD - High Priority */}
+              {isOnline && activeRide && (
+                <section className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3 text-red-500 animate-pulse" />
+                    <h3 className="text-[9px] font-black text-red-500 uppercase tracking-[0.15em]">Primary Objective</h3>
+                  </div>
+                  <RideCard ride={activeRide} onComplete={onCompleteRide} />
+                </section>
+              )}
 
-            {/* Incoming Requests */}
-            <section className="space-y-3">
+              {/* Request Stack - Hidden when active ride is present to avoid clutter */}
+              {!activeRide && (
+                <section className="space-y-4">
+                  <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-2">
+                        <Radar className="w-3 h-3 text-white/40" />
+                        <h3 className="text-[9px] font-black text-white/30 uppercase tracking-[0.15em]">Scanning Grid...</h3>
+                     </div>
+                     <span className="text-[9px] font-black bg-white/5 px-2 py-0.5 rounded text-white/40">{requests.length} SIGNALS</span>
+                  </div>
+
+                  {!isOnline ? (
+                    <div className="py-12 flex flex-col items-center text-center space-y-4">
+                      <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center border border-white/5">
+                         <Wifi className="w-6 h-6 text-white/20" />
+                      </div>
+                      <div>
+                         <p className="text-white font-bold text-sm">Offline</p>
+                         <p className="text-white/30 text-xs mt-1">Initialize link to receive data</p>
+                      </div>
+                    </div>
+                  ) : requests.length === 0 ? (
+                    <div className="py-12 border border-dashed border-white/5 rounded-3xl flex flex-col items-center space-y-4">
+                       <motion.div 
+                          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                          transition={{ repeat: Infinity, duration: 2 }}
+                          className="w-3 h-3 bg-red-500 rounded-full shadow-[0_0_20px_#ef4444]" 
+                       />
+                       <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.1em]">Awaiting Pulse</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <AnimatePresence mode="popLayout">
+                        {requests.map((request) => (
+                          <RequestCard key={request.id} request={request} onAccept={onAcceptRide} />
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </section>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div 
+               key="history"
+               initial={{ opacity: 0, y: 10 }}
+               animate={{ opacity: 1, y: 0 }}
+               exit={{ opacity: 0, y: -10 }}
+               className="space-y-4"
+            >
               <div className="flex items-center gap-2">
-                <ListFilter className="w-3.5 h-3.5 text-slate-400" />
-                <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  Incoming Requests ({requests.length})
-                </h2>
+                 <History className="w-3 h-3 text-white/40" />
+                 <h3 className="text-[9px] font-black text-white/30 uppercase tracking-[0.15em]">Operation Logs</h3>
               </div>
 
-              {!isOnline ? (
-                <div className="bg-slate-50 rounded-2xl p-8 text-center border-2 border-dashed border-slate-200">
-                  <p className="text-slate-400 text-sm font-medium">Go online to receive emergency requests</p>
-                </div>
-              ) : requests.length === 0 ? (
-                <div className="bg-slate-50 rounded-2xl p-8 text-center">
-                  <p className="text-slate-400 text-sm font-medium">Scanning for nearby emergencies...</p>
-                  <div className="mt-4 flex justify-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-red-400/50 rounded-full animate-bounce" />
-                    <div className="w-1.5 h-1.5 bg-red-400/50 rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <div className="w-1.5 h-1.5 bg-red-400/50 rounded-full animate-bounce [animation-delay:0.4s]" />
-                  </div>
-                </div>
+              {rideHistory.length === 0 ? (
+                <div className="py-16 text-center text-white/20 italic text-sm">No historical logs found</div>
               ) : (
-                <div className="space-y-3">
-                  <AnimatePresence mode="popLayout">
-                    {requests.map((request) => (
-                      <RequestCard key={request.id} request={request} onAccept={onAcceptRide} />
-                    ))}
-                  </AnimatePresence>
+                <div className="space-y-2">
+                  {rideHistory.map((ride, idx) => (
+                    <motion.div 
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      key={`${ride.id}-${idx}`} 
+                      className="group bg-white/5 p-4 rounded-2xl border border-white/5 flex items-center justify-between hover:bg-white/10 transition-all cursor-pointer"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-bold text-white text-sm">{ride.hospitalName}</p>
+                        <div className="flex items-center gap-1.5 mt-1 opacity-40 text-[10px]">
+                           <Shield className="w-2.5 h-2.5" />
+                           <p className="truncate">{ride.driverName}</p>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-black px-2 py-1 bg-white/10 text-white/60 rounded uppercase">
+                        {ride.emergencyType}
+                      </span>
+                    </motion.div>
+                  ))}
                 </div>
               )}
-            </section>
-          </>
-        ) : (
-          <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <History className="w-3.5 h-3.5 text-slate-400" />
-              <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Completed Missions ({rideHistory.length})
-              </h2>
-            </div>
-
-            {rideHistory.length === 0 ? (
-              <div className="bg-slate-50 rounded-2xl p-10 text-center border border-slate-100">
-                <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-400 text-sm font-medium">No missions completed yet</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {rideHistory.map((ride, idx) => (
-                  <div key={`${ride.id}-${idx}`} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-800 text-sm truncate">{ride.patient.name}</p>
-                      <p className="text-xs text-slate-500 mt-0.5 truncate">{ride.pickup.address}</p>
-                    </div>
-                    <span className="text-[10px] font-bold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg uppercase flex-shrink-0">
-                      {ride.emergencyType}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* ── Protocol Footer ── */}
+      <div className="p-4 border-t border-white/5 shrink-0">
+         <button
+            onClick={() => setProtocolModalOpen(true)}
+            className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 rounded-2xl border border-red-500/20 flex items-center justify-center gap-2 transition-all font-black text-[10px] uppercase tracking-widest"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            Protocols
+          </button>
+      </div>
+
 
       <ProtocolModal isOpen={isProtocolModalOpen} onClose={() => setProtocolModalOpen(false)} />
     </div>
   );
 };
+

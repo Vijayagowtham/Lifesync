@@ -2,9 +2,37 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ── Supabase Setup ───────────────────────────────────────────────────────────
+const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Check database integrity
+async function checkDatabase() {
+  console.log("\x1b[36m%s\x1b[0m", "Checking Supabase connection...");
+  const { error } = await supabase.from('profiles').select('count', { count: 'exact', head: true });
+  
+  if (error) {
+    if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
+      console.log("\x1b[31m%s\x1b[0m", "⚠️  DATABASE SCHEMA MISSING!");
+      console.log("\x1b[33m%s\x1b[0m", "Please run the SQL schema in supabase_schema.sql via the Supabase SQL Editor.");
+    } else {
+      console.error("\x1b[31m%s\x1b[0m", "Connection Error:", error.message);
+    }
+  } else {
+    console.log("\x1b[32m%s\x1b[0m", "✓ Supabase connected and schema verified.");
+  }
+}
+checkDatabase();
 
 // ── Haversine distance helper ────────────────────────────────────────────────
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -19,71 +47,16 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ── Generate realistic mock data near a location ─────────────────────────────
-function generateNearbyHospitals(lat: number, lng: number) {
-  const hospitalNames = [
-    "City General Hospital",
-    "St. Mary's Medical Center",
-    "LifeCare Specialist Clinic",
-    "Metropolitan Emergency Hub",
-    "Apollo Health Center",
-    "Green Cross Hospital",
-    "Sunrise Medical Institute",
-    "PrimeCare Hospital",
-  ];
-
-  return hospitalNames.map((name, i) => {
-    // Scatter hospitals 1–8 km around the user
-    const angle = (i / hospitalNames.length) * 2 * Math.PI;
-    const radiusKm = 1 + Math.random() * 7;
-    const dLat = (radiusKm / 111) * Math.cos(angle);
-    const dLng = (radiusKm / (111 * Math.cos((lat * Math.PI) / 180))) * Math.sin(angle);
-    const hLat = lat + dLat;
-    const hLng = lng + dLng;
-
-    const beds = Math.floor(Math.random() * 25) + 1;
-    const icu = Math.floor(Math.random() * 8);
-    const doctors = Math.floor(Math.random() * 15) + 3;
-    const status = beds > 10 ? "High Availability" : beds > 3 ? "Limited Availability" : "Critical";
-
-    return {
-      id: String(i + 1),
-      name,
-      address: `${Math.floor(Math.random() * 999) + 1} Medical Ave, Area ${i + 1}`,
-      lat: parseFloat(hLat.toFixed(6)),
-      lng: parseFloat(hLng.toFixed(6)),
-      distance: parseFloat(haversineKm(lat, lng, hLat, hLng).toFixed(1)),
-      contact: `+91 ${Math.floor(Math.random() * 90000 + 10000)} ${Math.floor(Math.random() * 90000 + 10000)}`,
-      availability: { beds, icu, doctors, status },
-      rating: parseFloat((3.5 + Math.random() * 1.5).toFixed(1)),
-    };
-  });
-}
-
-function generateNearbyAmbulances(lat: number, lng: number) {
-  const drivers = [
-    "Ravi Kumar", "Priya Sharma", "Arjun Reddy",
-    "Sneha Patel", "Manoj Singh",
-  ];
-  const statuses: Array<"available" | "en-route" | "busy"> = ["available", "en-route", "busy"];
-
-  return drivers.map((name, i) => {
-    const angle = (i / drivers.length) * 2 * Math.PI + Math.random();
-    const radiusKm = 0.5 + Math.random() * 4;
-    const dLat = (radiusKm / 111) * Math.cos(angle);
-    const dLng = (radiusKm / (111 * Math.cos((lat * Math.PI) / 180))) * Math.sin(angle);
-
-    return {
-      id: `amb-${i + 1}`,
-      driverName: name,
-      contact: `+91 ${Math.floor(Math.random() * 90000 + 10000)} ${Math.floor(Math.random() * 90000 + 10000)}`,
-      location: {
-        lat: parseFloat((lat + dLat).toFixed(6)),
-        lng: parseFloat((lng + dLng).toFixed(6)),
-      },
-      status: statuses[i % statuses.length],
-    };
-  });
+// ── Real-time Ambulance State ────────────────────────────────────────────────
+interface AmbulanceRequest {
+  id: string;
+  driverName: string;
+  hospitalName: string;
+  contact: string;
+  lat: number;
+  lng: number;
+  status: 'pending' | 'accepted' | 'en-route' | 'completed';
+  timestamp: string;
 }
 
 // ── Fetch real hospitals from Overpass API ────────────────────────────────────
@@ -139,11 +112,10 @@ async function fetchRealHospitals(lat: number, lng: number) {
       })
       .filter(Boolean);
 
-    if (hospitals.length >= 3) return hospitals;
-    return null; // fallback to mock
+    return hospitals;
   } catch (err) {
-    console.error("Overpass API error, falling back to mock data:", err);
-    return null;
+    console.error("Overpass API error:", err);
+    return [];
   }
 }
 
@@ -153,35 +125,188 @@ async function startServer() {
 
   app.use(express.json());
 
-  // ── Location-aware hospital API ──────────────────────────────────────────
+  // Logging and Request Tracking
+  app.use((req, res, next) => {
+    if (req.url.endsWith('.html') || req.url.includes('/clinical-portal')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+    console.log(`${req.method} ${req.url}`);
+    next();
+  });
+
+  // ── Unified hospital API (Sync with Supabase) ───────────────────────────
   app.get("/api/hospitals", async (req, res) => {
     const lat = parseFloat(req.query.lat as string);
     const lng = parseFloat(req.query.lng as string);
 
-    if (!isNaN(lat) && !isNaN(lng)) {
-      // Try to fetch real hospitals first
-      const realHospitals = await fetchRealHospitals(lat, lng);
-      if (realHospitals) {
-        return res.json(realHospitals);
-      }
-      // Fallback: generate realistic mock data near the user
-      return res.json(generateNearbyHospitals(lat, lng));
+    if (isNaN(lat) || isNaN(lng)) {
+      return res.status(400).json({ error: "Latitude and Longitude required" });
     }
 
-    // No location provided, return generic data (shouldn't happen normally)
-    return res.json(generateNearbyHospitals(13.0827, 80.2707));
+    try {
+      // 1. Try to fetch from Supabase first
+      let { data: dbHospitals, error } = await supabase
+        .from('hospitals')
+        .select('*');
+
+      if (error) throw error;
+
+      // 2. If DB is empty, fetch from Overpass and seed the DB
+      if (!dbHospitals || dbHospitals.length === 0) {
+        console.log("[Supabase] Registry empty. Fetching from Overpass...");
+        const realHospitals = await fetchRealHospitals(lat, lng);
+        
+        if (realHospitals && realHospitals.length > 0) {
+          // Prepare for bulk insert (ignoring mapping for simplicity in this demo)
+          const toInsert = realHospitals.map(h => ({
+            name: h.name,
+            address: h.address,
+            lat: h.lat,
+            lng: h.lng,
+            contact: h.contact,
+            beds_total: h.availability.beds + 20,
+            beds_avail: h.availability.beds,
+            icu_total: h.availability.icu + 5,
+            icu_avail: h.availability.icu,
+            rating: h.rating,
+            status: h.availability.status
+          }));
+          
+          await supabase.from('hospitals').insert(toInsert);
+          
+          // Refetch to get newly created IDs
+          const { data: refreshed } = await supabase.from('hospitals').select('*');
+          dbHospitals = refreshed;
+        }
+      }
+
+      // 3. Map back to UI type and calculate distance
+      const response = dbHospitals?.map(h => ({
+        id: h.id,
+        name: h.name,
+        address: h.address,
+        lat: h.lat,
+        lng: h.lng,
+        distance: parseFloat(haversineKm(lat, lng, h.lat, h.lng).toFixed(1)),
+        contact: h.contact,
+        availability: { 
+          beds: h.beds_avail, 
+          icu: h.icu_avail, 
+          doctors: Math.floor(Math.random() * 10) + 5, 
+          status: h.status 
+        },
+        rating: h.rating
+      }));
+
+      return res.json(response);
+    } catch (err) {
+      console.error("Supabase Hospital Error:", err);
+      res.status(500).json({ error: "Failed to fetch hospitals" });
+    }
   });
 
-  // ── Location-aware ambulance API ─────────────────────────────────────────
-  app.get("/api/ambulances", (req, res) => {
+  // ── Unified ambulance API (Sync with Supabase) ─────────────────────────
+  app.get("/api/ambulances", async (req, res) => {
     const lat = parseFloat(req.query.lat as string);
     const lng = parseFloat(req.query.lng as string);
 
-    if (!isNaN(lat) && !isNaN(lng)) {
-      return res.json(generateNearbyAmbulances(lat, lng));
-    }
+    try {
+      const { data, error } = await supabase
+        .from('ambulances')
+        .select('*');
 
-    return res.json(generateNearbyAmbulances(13.0827, 80.2707));
+      if (error) throw error;
+
+      const response = data.map(a => ({
+        id: a.id,
+        driverName: a.driver_name,
+        contact: a.contact,
+        location: { lat: a.lat, lng: a.lng },
+        status: a.status
+      }));
+
+      return res.json(response);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch ambulances" });
+    }
+  });
+
+  // ── Ambulance Tracking Endpoints (Supabase Backed) ─────────────────────────
+  app.post("/api/ambulance/request", async (req, res) => {
+    const { driverName, hospitalName, contact, lat, lng } = req.body;
+    try {
+      const { data, error } = await supabase
+        .from('ambulance_requests')
+        .insert([{
+          driver_name: driverName || "Assigned Driver",
+          hospital_name: hospitalName || "LifeSync General",
+          contact: contact || "+91 00000 00000",
+          lat: lat || 13.0827,
+          lng: lng || 80.2707,
+          status: 'pending'
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.status(201).json(data);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to create request" });
+    }
+  });
+
+  app.get("/api/ambulance/requests", async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from('ambulance_requests')
+        .select('*')
+        .neq('status', 'completed');
+
+      if (error) throw error;
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch requests" });
+    }
+  });
+
+  app.patch("/api/ambulance/request/:id", async (req, res) => {
+    const { id } = req.params;
+    const { status, driverName, driverContact } = req.body;
+    try {
+      const { data, error } = await supabase
+        .from('ambulance_requests')
+        .update({ 
+          status,
+          ...(driverName && { driver_name: driverName }),
+          ...(driverContact && { contact: driverContact })
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.json(data);
+    } catch (err) {
+      res.status(404).json({ error: "Request not found" });
+    }
+  });
+
+  app.post("/api/ambulance/location/:id", async (req, res) => {
+    const { id } = req.params;
+    const { lat, lng } = req.body;
+    try {
+      const { error } = await supabase
+        .from('ambulance_requests')
+        .update({ lat, lng })
+        .eq('id', id);
+
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (err) {
+      res.status(404).json({ error: "Request not found" });
+    }
   });
 
   // Vite middleware for development
@@ -190,10 +315,37 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: "spa",
     });
+    
+    // Serve the hospital portal dist folder statically
+    const hospitalDistPath = path.join(process.cwd(), "hospital-management-frontend/dist");
+    app.use("/clinical-portal", express.static(hospitalDistPath, {
+      setHeaders: (res, path) => {
+        if (path.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-store');
+        }
+      }
+    }));
+    
+    // Special fallback for Hospital Portal SPA routing
+    app.get("/clinical-portal/*", (req, res, next) => {
+      const hospitalIndex = path.join(hospitalDistPath, "index.html");
+      res.sendFile(hospitalIndex, (err) => {
+        if (err) next(); 
+      });
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
+    const hospitalDistPath = path.join(process.cwd(), "hospital-management-frontend/dist");
+    
+    app.use("/clinical-portal", express.static(hospitalDistPath));
     app.use(express.static(distPath));
+
+    app.get("/clinical-portal/*", (req, res) => {
+      res.sendFile(path.join(hospitalDistPath, "index.html"));
+    });
+
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });

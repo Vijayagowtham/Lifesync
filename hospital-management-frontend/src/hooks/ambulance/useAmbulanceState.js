@@ -1,18 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MOCK_REQUESTS } from '../../lib/ambulance/mockData';
+import { supabase } from '../../supabase';
 
 const INITIAL_LOCATION = {
-  lat: 40.7128,
-  lng: -74.0060,
-  address: 'New York City Medical Center'
+  lat: 13.0827,
+  lng: 80.2707,
+  address: 'LifeSync Medical Center'
 };
 
 export const useAmbulanceState = () => {
   const [driver, setDriver] = useState({
-    id: 'drv-1',
+    id: 'drv-101',
     name: 'Officer Rodriguez',
+    contact: '+91 91234 56789',
     isOnline: false,
-    currentLocation: INITIAL_LOCATION
+    currentLocation: INITIAL_LOCATION,
+    currentSpeed: 0,
+    heading: 0
   });
 
   const [activeRide, setActiveRide] = useState(null);
@@ -21,36 +24,67 @@ export const useAmbulanceState = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedOut, setIsLoggedOut] = useState(false);
 
-  // Simulate initial loading
+  // ── Initial Data Fetch & Realtime Subscription ──
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!driver.isOnline) return;
 
-  // Simulate incoming requests when online
-  useEffect(() => {
-    if (driver.isOnline && !activeRide) {
-      const interval = setInterval(() => {
-        if (requests.length < 3 && Math.random() > 0.7) {
-          const newRequest = {
-            ...MOCK_REQUESTS[Math.floor(Math.random() * MOCK_REQUESTS.length)],
-            id: Math.random().toString(36).substr(2, 9),
-            timestamp: new Date().toISOString()
-          };
-          setRequests(prev => [newRequest, ...prev]);
+    // 1. Initial Fetch
+    const fetchRequests = async () => {
+      const { data, error } = await supabase
+        .from('ambulance_requests')
+        .select('*')
+        .neq('status', 'completed');
+      
+      if (!error && data) {
+        setRequests(data.filter(r => r.status === 'pending'));
+        const active = data.find(r => r.status === 'accepted' || r.status === 'en-route');
+        if (active) setActiveRide(active);
+      }
+    };
+    fetchRequests();
+
+    // 2. Realtime Channel
+    const channel = supabase
+      .channel('ambulance-dispatch')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ambulance_requests' },
+        (payload) => {
+          console.log('[Supabase Realtime] Dispatch update:', payload);
+          const newRecord = payload.new;
           
-          // Play sound alert
-          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-          audio.play().catch((err) => {
-            console.warn('Audio playback prevented by browser policy', err);
-          });
+          if (payload.eventType === 'INSERT') {
+            if (newRecord.status === 'pending') {
+              setRequests(prev => [newRecord, ...prev]);
+              // alert sound
+              new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            // Update requests list
+            setRequests(prev => prev.filter(r => r.id !== newRecord.id && newRecord.status === 'pending'));
+            
+            // Update active ride
+            if (activeRide && activeRide.id === newRecord.id) {
+              if (newRecord.status === 'completed') {
+                setRideHistory(prev => [newRecord, ...prev]);
+                setActiveRide(null);
+              } else {
+                setActiveRide(newRecord);
+              }
+            }
+          }
         }
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [driver.isOnline, activeRide, requests.length]);
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [driver.isOnline, activeRide?.id]);
+
+  useEffect(() => {
+    setIsLoading(false);
+  }, []);
 
   const toggleOnline = useCallback(() => {
     setDriver(prev => ({ ...prev, isOnline: !prev.isOnline }));
@@ -60,18 +94,40 @@ export const useAmbulanceState = () => {
     }
   }, [driver.isOnline]);
 
-  const acceptRide = useCallback((id) => {
-    const ride = requests.find(r => r.id === id);
-    if (ride) {
-      setActiveRide(ride);
-      setRequests(prev => prev.filter(r => r.id !== id));
-    }
-  }, [requests]);
+  const acceptRide = useCallback(async (id) => {
+    try {
+      const { data, error } = await supabase
+        .from('ambulance_requests')
+        .update({ 
+          status: 'accepted',
+          driver_name: driver.name,
+          contact: driver.contact
+        })
+        .eq('id', id)
+        .select()
+        .single();
 
-  const completeRide = useCallback(() => {
-    if (activeRide) {
+      if (error) throw error;
+      setActiveRide(data);
+      setRequests(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      console.error("Failed to accept ride", err);
+    }
+  }, [driver.name, driver.contact]);
+
+  const completeRide = useCallback(async () => {
+    if (!activeRide) return;
+    try {
+      const { error } = await supabase
+        .from('ambulance_requests')
+        .update({ status: 'completed' })
+        .eq('id', activeRide.id);
+
+      if (error) throw error;
       setRideHistory(prev => [activeRide, ...prev]);
       setActiveRide(null);
+    } catch (err) {
+      console.error("Failed to complete ride", err);
     }
   }, [activeRide]);
 
@@ -85,11 +141,7 @@ export const useAmbulanceState = () => {
   const updateDriverLocation = useCallback((lat, lng) => {
     setDriver(prev => ({
       ...prev,
-      currentLocation: {
-        ...prev.currentLocation,
-        lat,
-        lng
-      }
+      currentLocation: { ...prev.currentLocation, lat, lng }
     }));
   }, []);
 

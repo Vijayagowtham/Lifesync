@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LifeSync | Hospital Registration</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-low": "#f2f4f6",
+                    "surface-tint": "#bf0715",
+                    "inverse-surface": "#2d3133",
+                    "on-error": "#ffffff",
+                    "on-surface": "#191c1e",
+                    "surface-container": "#eceef0",
+                    "on-primary-container": "#fff6f5",
+                    "primary": "#b70011",
+                    "surface": "#f7f9fb",
+                    "background": "#f7f9fb",
+                    "secondary-fixed-dim": "#ffb4ab",
+                    "inverse-primary": "#ffb4ab",
+                    "on-background": "#191c1e",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#93000b",
+                    "secondary-fixed": "#ffdad6",
+                    "error": "#ba1a1a",
+                    "on-tertiary-container": "#f3f8ff",
+                    "on-secondary-container": "#700f0f",
+                    "tertiary": "#005e8d",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#004b71",
+                    "primary-fixed": "#ffdad6",
+                    "surface-container-high": "#e6e8ea",
+                    "surface-container-highest": "#e0e3e5",
+                    "inverse-on-surface": "#eff1f3",
+                    "surface-variant": "#e0e3e5",
+                    "outline": "#916f6b",
+                    "on-surface-variant": "#5c403c",
+                    "surface-dim": "#d8dadc",
+                    "tertiary-container": "#0078b2",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed": "#001e30",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-fixed-dim": "#ffb4ab",
+                    "tertiary-fixed": "#cbe6ff",
+                    "secondary": "#a73831",
+                    "tertiary-fixed-dim": "#90cdff",
+                    "secondary-container": "#fd786c",
+                    "outline-variant": "#e6bdb8",
+                    "on-primary-fixed": "#410002",
+                    "surface-bright": "#f7f9fb",
+                    "on-secondary-fixed": "#410002",
+                    "primary-container": "#dc2626",
+                    "on-secondary-fixed-variant": "#86211c",
+                    "on-tertiary": "#ffffff",
+                    "on-error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "1.5rem",
+                    "2xl": "2rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        h1, h2, h3 {
+            font-family: 'Manrope', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(247, 249, 251, 0.7);
+            backdrop-filter: blur(20px);
+        }
+        .editorial-shadow {
+            box-shadow: 0 12px 32px rgba(167, 56, 49, 0.06);
+        }
+    </style>
+</head>
+<body class="text-on-surface antialiased">
+<!-- TopNavBar (Shared Component) -->
+<nav class="fixed top-0 w-full z-50 bg-slate-50/70 dark:bg-slate-900/70 backdrop-blur-xl flex justify-between items-center px-6 py-4 max-w-full mx-auto tonal-shift-bg-surface-container-low">
+<div class="flex items-center gap-2">
+<span class="text-2xl font-extrabold text-red-700 dark:text-red-500 tracking-tighter font-headline">LifeSync</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-slate-600 dark:text-slate-400 hover:text-red-600 transition-colors">help_outline</button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="min-h-screen pt-24 pb-12 px-6 flex items-center justify-center">
+<div class="max-w-6xl w-full grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
+<!-- Left Side: Editorial Branding & Progress -->
+<div class="md:col-span-5 space-y-12">
+<div class="space-y-6">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-secondary-fixed text-on-secondary-fixed-variant rounded-full text-xs font-bold uppercase tracking-widest">
+                        Step 2 of 2
+                    </div>
+<h1 class="text-5xl font-extrabold text-on-surface tracking-tight leading-[1.1] font-headline">
+                        Clinical <span class="text-primary">Excellence</span> Starts Here.
+                    </h1>
+<p class="text-lg text-on-surface-variant font-body leading-relaxed max-w-md">
+                        Complete your medical facility profile to join the LifeSync network. Our platform ensures your data remains secure with enterprise-grade clinical encryption.
+                    </p>
+</div>
+<!-- Progress Indicator Visual -->
+<div class="flex items-center gap-4">
+<div class="h-1 w-24 bg-primary rounded-full"></div>
+<div class="h-1 w-24 bg-primary rounded-full"></div>
+</div>
+<!-- Featured Image Card (Tonal Layering) -->
+<div class="hidden md:block relative aspect-[4/3] rounded-2xl overflow-hidden editorial-shadow bg-surface-container-low">
+<img class="w-full h-full object-cover opacity-90 mix-blend-multiply" data-alt="minimalist modern hospital lobby with floor-to-ceiling windows, natural light, and clean white architectural lines" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBllBFao7KYmbYjhC2_bSuSxN0Ber6yPx1M-TA6oX0tOY8mOW4MrFtPwxTHmLb38uCEBh4K4j_RkxtR0QxDFP5XomaYDo6WB2PUNZK-X7GGwJqrojPcIvgIH-PQO6rDg9iisJZINFb6lPTZEw6XjZkuJB1prGeVjJA_pGz8H6eHow6u1irOrpPnI9XT-E30S2obhLpS68TIjOCB13kNMDFw4p_L2JUalZO9lCxON4S_hxHSjq5Bs-uUPr_cXHsx_gcN2LmCAGM1VCs"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent"></div>
+<div class="absolute bottom-6 left-6 right-6 p-6 bg-surface/80 backdrop-blur-md rounded-xl">
+<span class="material-symbols-outlined text-primary mb-2" data-icon="verified_user">verified_user</span>
+<p class="text-sm font-semibold text-on-surface">Trusted by over 450+ medical centers globally</p>
+</div>
+</div>
+</div>
+<!-- Right Side: Registration Form -->
+<div class="md:col-span-7">
+<div class="bg-surface-container-lowest rounded-2xl p-8 md:p-12 editorial-shadow">
+<form class="space-y-8">
+<div>
+<h2 class="text-2xl font-bold text-on-surface mb-2 font-headline">Hospital Management Registration</h2>
+<p class="text-on-surface-variant text-sm">Please provide the official details of your medical institution.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Hospital Name -->
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider font-label ml-1">Hospital Name</label>
+<div class="group relative">
+<input class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 focus:ring-0 focus:bg-surface-container-lowest transition-all border-b-2 border-transparent focus:border-primary text-on-surface placeholder:text-outline-variant/60" placeholder="e.g. St. Mary's General" type="text"/>
+</div>
+</div>
+<!-- Contact Number -->
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider font-label ml-1">Contact Number</label>
+<div class="group relative">
+<input class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 focus:ring-0 focus:bg-surface-container-lowest transition-all border-b-2 border-transparent focus:border-primary text-on-surface placeholder:text-outline-variant/60" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+</div>
+<!-- Email ID -->
+<div class="md:col-span-2 space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider font-label ml-1">Official Email ID</label>
+<div class="group relative">
+<input class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 focus:ring-0 focus:bg-surface-container-lowest transition-all border-b-2 border-transparent focus:border-primary text-on-surface placeholder:text-outline-variant/60" placeholder="administration@hospital.com" type="email"/>
+<!-- Validation Example -->
+<div class="mt-2 flex items-center gap-1.5 text-error text-[11px] font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="error_outline">error_outline</span>
+                                        Please enter a valid institutional email address.
+                                    </div>
+</div>
+</div>
+<!-- Hospital Location -->
+<div class="md:col-span-2 space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider font-label ml-1">Hospital Location</label>
+<div class="group relative">
+<input class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 focus:ring-0 focus:bg-surface-container-lowest transition-all border-b-2 border-transparent focus:border-primary text-on-surface placeholder:text-outline-variant/60" placeholder="Full street address, City" type="text"/>
+</div>
+</div>
+<!-- Pin Code -->
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider font-label ml-1">Pin Code</label>
+<div class="group relative">
+<input class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 focus:ring-0 focus:bg-surface-container-lowest transition-all border-b-2 border-transparent focus:border-primary text-on-surface placeholder:text-outline-variant/60" placeholder="123456" type="text"/>
+</div>
+</div>
+<!-- Create Password -->
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider font-label ml-1">Create Password</label>
+<div class="group relative">
+<input class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 focus:ring-0 focus:bg-surface-container-lowest transition-all border-b-2 border-transparent focus:border-primary text-on-surface placeholder:text-outline-variant/60" placeholder="••••••••" type="password"/>
+</div>
+</div>
+</div>
+<!-- Action Section -->
+<div class="pt-6 space-y-6">
+<button class="w-full bg-gradient-to-br from-primary-container to-primary text-on-primary font-bold py-4 rounded-xl editorial-shadow hover:opacity-90 active:scale-[0.98] transition-all font-headline text-lg">
+                                Register Hospital
+                            </button>
+<div class="flex items-center justify-between text-xs text-on-surface-variant font-medium">
+<label class="flex items-center gap-2 cursor-pointer">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span>I agree to the <a class="text-primary underline" href="#">Clinical Terms of Service</a></span>
+</label>
+<a class="text-tertiary hover:underline" href="#">Need help?</a>
+</div>
+</div>
+</form>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="w-full py-8 bg-transparent flex flex-col md:flex-row justify-center items-center gap-6 w-full opacity-60">
+<div class="text-sm font-bold text-slate-900 dark:text-white font-headline">LifeSync</div>
+<div class="flex gap-6 font-inter text-xs tracking-wide">
+<a class="text-slate-500 hover:text-red-700 transition-colors" href="#">Privacy Policy</a>
+<a class="text-slate-500 hover:text-red-700 transition-colors" href="#">Terms of Service</a>
+<a class="text-slate-500 hover:text-red-700 transition-colors" href="#">Security</a>
+</div>
+<div class="text-slate-500 font-inter text-xs">© 2024 LifeSync Clinical Atelier. All rights reserved.</div>
+</footer>
+</body></html>

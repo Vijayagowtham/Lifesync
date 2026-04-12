@@ -78,7 +78,7 @@ export default function Chatbot({ hospitals, isOpen: externalIsOpen, setIsOpen: 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // Initialize Gemini
-  const genAI = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyCyU2DA9owLOSePg_uMSqy9dc3GTQq2bfU" });
+  const genAI = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
   useEffect(() => {
     if (scrollRef.current) {

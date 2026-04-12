@@ -11,8 +11,8 @@ const navItems = [
   { to: '/patients', icon: Users, label: 'Patients' },
   { to: '/appointments', icon: CalendarDays, label: 'Booked Appointments' },
   { to: '/availability', icon: Activity, label: 'Availability' },
-  { to: '/ambulance', icon: Ambulance, label: 'Ambulance' },
-  { to: '/ambulance-driver', icon: Users, label: 'Driver Dashboard' },
+  { to: '/ambulance', icon: Ambulance, label: 'Ambulance History' },
+  { to: '/ambulance-driver', icon: Users, label: 'Ambulance Requests' },
 ];
 
 export default function Sidebar({ isOpen, onClose, user, onLogout }) {

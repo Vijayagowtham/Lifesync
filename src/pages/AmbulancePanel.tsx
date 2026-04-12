@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { 
   Ambulance as AmbulanceIcon, 
   Phone, 
@@ -8,19 +9,129 @@ import {
   ChevronRight,
   AlertCircle,
   CheckCircle2,
-  Navigation
+  Navigation,
+  Loader2,
+  Shield,
+  TrendingUp,
+  MessageSquare
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Ambulance } from "../types";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
+import { supabase } from "../lib/supabase";
 
 interface AmbulancePanelProps {
   ambulances: Ambulance[];
+  user?: any;
 }
 
-export default function AmbulancePanel({ ambulances }: AmbulancePanelProps) {
+export default function AmbulancePanel({ ambulances, user }: AmbulancePanelProps) {
+  const [activeRequest, setActiveRequest] = useState<any>(null);
+  const [isRequesting, setIsRequesting] = useState(false);
+
+  // ── Supabase Realtime Subscription ──
+  useEffect(() => {
+    if (!activeRequest?.id) return;
+
+    console.log(`[Supabase] Subscribing to request: ${activeRequest.id}`);
+    
+    const channel = supabase
+      .channel(`request-${activeRequest.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'ambulance_requests',
+          filter: `id=eq.${activeRequest.id}`,
+        },
+        (payload) => {
+          console.log('[Supabase] Real-time update received:', payload);
+          const updated = payload.new as any;
+          setActiveRequest(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              status: updated.status,
+              driverName: updated.driver_name,
+              hospitalName: updated.hospital_name,
+              contact: updated.contact,
+              lat: updated.lat,
+              lng: updated.lng
+            };
+          });
+
+          if (updated.status === 'completed') {
+            setTimeout(() => setActiveRequest(null), 5000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeRequest?.id]);
+
+  // Handle Live Location Tracking (Direct to Supabase)
+  useEffect(() => {
+    if (activeRequest?.status !== 'accepted' && activeRequest?.status !== 'en-route') return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        // Directly update Supabase for lower latency and better persistence
+        await supabase
+          .from('ambulance_requests')
+          .update({ lat: latitude, lng: longitude })
+          .eq('id', activeRequest.id);
+      },
+      (err) => console.error("Location tracking error", err),
+      { enableHighAccuracy: true }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [activeRequest?.status, activeRequest?.id]);
+
+  const handleRequestHelp = async (selectedAmbulance?: any) => {
+    setIsRequesting(true);
+    const target = selectedAmbulance || ambulances[0] || { driverName: "Emergency Response", contact: "+91 98765 43210" };
+    
+    try {
+      // Get current location first
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        
+        const { data, error } = await supabase
+          .from('ambulance_requests')
+          .insert([{
+            driver_name: target.driverName,
+            hospital_name: "LifeSync General",
+            contact: target.contact || user?.contact || "+91 98765 43210",
+            lat: latitude,
+            lng: longitude,
+            status: 'pending'
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        setActiveRequest(data);
+        setIsRequesting(false);
+      }, (err) => {
+        console.error("Location access denied", err);
+        alert("Location access is required for emergency requests.");
+        setIsRequesting(false);
+      });
+    } catch (err) {
+      console.error("Request failed", err);
+      setIsRequesting(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -28,10 +139,20 @@ export default function AmbulancePanel({ ambulances }: AmbulancePanelProps) {
           <h1 className="text-3xl font-bold text-slate-900">Ambulance Support</h1>
           <p className="text-slate-500">Request emergency transport or track active ambulance units.</p>
         </div>
-        <Button className="rounded-2xl bg-primary hover:bg-primary/90 py-6 px-8 text-lg font-bold shadow-lg shadow-primary/20">
-          <AlertCircle className="w-6 h-6 mr-2" />
-          Request Emergency Help
-        </Button>
+        {!activeRequest ? (
+          <Button 
+            onClick={handleRequestHelp}
+            disabled={isRequesting}
+            className="rounded-2xl bg-primary hover:bg-primary/90 py-6 px-8 text-lg font-bold shadow-lg shadow-primary/20"
+          >
+            {isRequesting ? <Loader2 className="w-6 h-6 mr-2 animate-spin" /> : <AlertCircle className="w-6 h-6 mr-2" />}
+            Request Emergency Help
+          </Button>
+        ) : (
+          <Badge className="bg-red-50 text-red-600 border-red-100 py-3 px-6 rounded-2xl text-lg font-black animate-pulse">
+            EMERGENCY ACTIVE
+          </Badge>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -108,17 +229,94 @@ export default function AmbulancePanel({ ambulances }: AmbulancePanelProps) {
             <Clock className="text-primary w-5 h-5" />
             Your Requests
           </h2>
-          <Card className="border-none shadow-sm rounded-2xl bg-white">
+          <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
             <CardContent className="p-6">
-              <div className="flex flex-col items-center text-center py-8">
-                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle2 className="w-10 h-10 text-slate-200" />
-                </div>
-                <h3 className="font-bold text-slate-900">No Active Requests</h3>
-                <p className="text-sm text-slate-500 mt-2">
-                  You haven't requested any ambulance services recently.
-                </p>
-              </div>
+              <AnimatePresence mode="wait">
+                {!activeRequest ? (
+                  <motion.div 
+                    key="no-request"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col items-center text-center py-8"
+                  >
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                      <CheckCircle2 className="w-10 h-10 text-slate-200" />
+                    </div>
+                    <h3 className="font-bold text-slate-900">No Active Requests</h3>
+                    <p className="text-sm text-slate-500 mt-2">
+                      You haven't requested any ambulance services recently.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="active-request"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
+                   >
+                    <div className="flex items-center justify-between p-4 bg-red-50 rounded-2xl border border-red-100">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-red-400">Status</p>
+                        <h4 className="text-red-600 font-bold uppercase">{activeRequest.status}</h4>
+                      </div>
+                      <div className="p-3 bg-white rounded-xl shadow-sm">
+                        <Activity className="text-red-500 animate-pulse" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
+                           <User className="w-4 h-4 text-slate-400" />
+                         </div>
+                         <div>
+                           <p className="text-[9px] font-bold text-slate-400 uppercase">Hospital</p>
+                           <p className="text-sm font-bold">{activeRequest.hospitalName}</p>
+                         </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
+                           <User className="w-4 h-4 text-slate-400" />
+                         </div>
+                         <div>
+                           <p className="text-[9px] font-bold text-slate-400 uppercase">Driver</p>
+                           <p className="text-sm font-bold">{activeRequest.driverName}</p>
+                         </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
+                           <Phone className="w-4 h-4 text-slate-400" />
+                         </div>
+                         <div>
+                           <p className="text-[9px] font-bold text-slate-400 uppercase">Contact</p>
+                           <p className="text-sm font-bold">{activeRequest.contact}</p>
+                         </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
+                           <Clock className="w-4 h-4 text-slate-400" />
+                         </div>
+                         <div>
+                           <p className="text-[9px] font-bold text-slate-400 uppercase">Time Requested</p>
+                           <p className="text-sm font-bold">{new Date(activeRequest.timestamp).toLocaleTimeString()}</p>
+                         </div>
+                      </div>
+                    </div>
+
+                    {activeRequest.status === 'accepted' || activeRequest.status === 'en-route' ? (
+                       <Button className="w-full bg-slate-900 text-white rounded-xl py-6 font-bold flex items-center justify-center gap-2">
+                         <Navigation className="w-5 h-5" /> Live Tracking Active
+                       </Button>
+                    ) : (
+                       <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center gap-3">
+                         <Loader2 className="animate-spin text-slate-400" />
+                         <span className="text-xs font-medium text-slate-500">Connecting to nearest medical dispatch...</span>
+                       </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </CardContent>
           </Card>
 

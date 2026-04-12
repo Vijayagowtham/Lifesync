@@ -35,6 +35,7 @@ import {
 import { Hospital, Ambulance } from "./types";
 import Chatbot from "./components/Chatbot";
 import ProfileModal, { UserProfile } from "./components/ProfileModal";
+import { supabase } from "./lib/supabase";
 
 // Pages
 import Dashboard from "./pages/Dashboard";
@@ -46,14 +47,13 @@ import AuthPage from "./pages/AuthPage";
 type Page = "dashboard" | "hospitals" | "map" | "ambulance";
 type LocationStatus = "pending" | "requesting" | "granted" | "denied" | "unavailable";
 
-// ─── Default profile ──────────────────────────────────────────────────────────
 const DEFAULT_PROFILE: UserProfile = {
-  name: "Alex Johnson",
-  email: "alex.johnson@lifesync.health",
+  name: "User",
+  email: "user@lifesync.health",
   avatarUrl: "https://picsum.photos/seed/user/100/100",
 };
 
-// ─── Location Permission Gate ─────────────────────────────────────────────────
+// ── Location Permission Gate ─────────────────────────────────────────────────
 function LocationGate({
   status,
   onRequest,
@@ -69,36 +69,26 @@ function LocationGate({
         transition={{ duration: 0.5 }}
         className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-10 text-center"
       >
-        {/* Logo */}
         <div className="flex justify-center mb-6">
           <div className="bg-primary p-4 rounded-2xl shadow-lg shadow-primary/30">
             <Activity className="text-white w-10 h-10" />
           </div>
         </div>
-
         <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Life Sync</h1>
         <p className="text-slate-500 text-sm mb-8">Healthcare at your fingertips</p>
-
+        
         {status === "denied" || status === "unavailable" ? (
           <div className="space-y-6">
             <div className="bg-red-50 rounded-2xl p-6">
               <AlertTriangle className="w-10 h-10 text-primary mx-auto mb-3" />
-              <h2 className="text-xl font-bold text-slate-900 mb-2">
-                Location Access Required
-              </h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-2">Location Access Required</h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                {status === "unavailable"
-                  ? "Your browser does not support location services. Please use a modern browser."
-                  : "Location access is required to find nearby hospitals. Please allow location access in your browser settings and try again."}
+                {status === "unavailable" ? "Your browser does not support location services." : "Location access is required to find nearby hospitals."}
               </p>
             </div>
             {status === "denied" && (
-              <Button
-                onClick={onRequest}
-                className="w-full py-6 rounded-2xl text-lg font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
-              >
-                <Navigation className="w-5 h-5 mr-2" />
-                Try Again
+              <Button onClick={onRequest} className="w-full py-6 rounded-2xl text-lg font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                <Navigation className="w-5 h-5 mr-2" /> Try Again
               </Button>
             )}
           </div>
@@ -108,49 +98,22 @@ function LocationGate({
               {status === "requesting" ? (
                 <>
                   <Loader2 className="w-10 h-10 text-primary mx-auto mb-3 animate-spin" />
-                  <h2 className="text-xl font-bold text-slate-900 mb-2">
-                    Detecting Your Location…
-                  </h2>
-                  <p className="text-sm text-slate-600">
-                    Please accept the browser permission prompt to continue.
-                  </p>
+                  <h2 className="text-xl font-bold text-slate-900 mb-2">Detecting Your Location…</h2>
+                  <p className="text-sm text-slate-600">Please accept the browser permission prompt to continue.</p>
                 </>
               ) : (
                 <>
                   <ShieldCheck className="w-10 h-10 text-primary mx-auto mb-3" />
-                  <h2 className="text-xl font-bold text-slate-900 mb-2">
-                    Allow Location Access
-                  </h2>
+                  <h2 className="text-xl font-bold text-slate-900 mb-2">Allow Location Access</h2>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    Life Sync needs your current location to show nearby hospitals,
-                    ambulances, and emergency services in real time.
+                    Life Sync needs your current location to show nearby hospitals, ambulances, and emergency services in real time.
                   </p>
                 </>
               )}
             </div>
-
-            <div className="flex flex-col gap-3 text-left text-sm text-slate-600">
-              {[
-                "Find hospitals near you instantly",
-                "Real-time ambulance tracking",
-                "Emergency routing & navigation",
-              ].map((f) => (
-                <div key={f} className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                  </div>
-                  {f}
-                </div>
-              ))}
-            </div>
-
             {status !== "requesting" && (
-              <Button
-                onClick={onRequest}
-                className="w-full py-6 rounded-2xl text-lg font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
-              >
-                <Navigation className="w-5 h-5 mr-2" />
-                Allow Location Access
+              <Button onClick={onRequest} className="w-full py-6 rounded-2xl text-lg font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                <Navigation className="w-5 h-5 mr-2" /> Allow Location Access
               </Button>
             )}
           </div>
@@ -160,36 +123,69 @@ function LocationGate({
   );
 }
 
-// ─── Main App ─────────────────────────────────────────────────────────────────
+// ── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [activePage, setActivePage] = useState<Page>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  // ── Authentication ──
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return localStorage.getItem("lifesync_auth") === "true";
-  });
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    const stored = localStorage.getItem("lifesync_profile");
-    return stored ? JSON.parse(stored) : DEFAULT_PROFILE;
-  });
-
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [ambulances, setAmbulances] = useState<Ambulance[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // ── Geolocation ──
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("pending");
-
   const [profileOpen, setProfileOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+
+  // ── Auth Session Check ──
+  useEffect(() => {
+    async function checkUser() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setIsLoggedIn(true);
+        // Fetch full profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileData) {
+          setProfile(profileData);
+        } else {
+          setProfile({
+            name: session.user.email?.split('@')[0] || "User",
+            email: session.user.email || "",
+            avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.id}`
+          });
+        }
+      }
+      setLoading(false);
+    }
+    checkUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setIsLoggedIn(true);
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        if (profileData) setProfile(profileData);
+      } else if (event === 'SIGNED_OUT') {
+        setIsLoggedIn(false);
+        setProfile(DEFAULT_PROFILE);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLogin = (userData: UserProfile) => {
     setIsLoggedIn(true);
     setProfile(userData);
-    localStorage.setItem("lifesync_auth", "true");
-    localStorage.setItem("lifesync_profile", JSON.stringify(userData));
   };
 
   useEffect(() => {
@@ -197,7 +193,6 @@ export default function App() {
       setLocationStatus("unavailable");
       return;
     }
-
     setLocationStatus("requesting");
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -206,18 +201,14 @@ export default function App() {
       },
       (err) => {
         console.error("Location error:", err);
-        // Only set denied if we don't have a location yet
         setLocationStatus(prev => prev === "granted" ? "granted" : "denied");
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
   const requestLocation = useCallback(() => {
-    // This is now primarily for the "Try Again" buttons
-    // Since we have a persistent watch, we just re-verify
     if (!navigator.geolocation) {
       setLocationStatus("unavailable");
       return;
@@ -225,13 +216,12 @@ export default function App() {
     setLocationStatus("requesting");
   }, []);
 
-  // Fetch hospitals & ambulances based on user location
+  // Fetch hospitals & ambulances
   useEffect(() => {
+    if (locationStatus !== 'granted') return;
     const fetchData = async () => {
       try {
-        const params = userLocation
-          ? `?lat=${userLocation[0]}&lng=${userLocation[1]}`
-          : "";
+        const params = userLocation ? `?lat=${userLocation[0]}&lng=${userLocation[1]}` : "";
         const [hospRes, ambRes] = await Promise.all([
           fetch(`/api/hospitals${params}`),
           fetch(`/api/ambulances${params}`),
@@ -240,16 +230,13 @@ export default function App() {
         setAmbulances(await ambRes.json());
       } catch (err) {
         console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
       }
     };
     fetchData();
-    // Re-fetch only when userLocation is first established (null -> value)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userLocation !== null]);
+  }, [userLocation, locationStatus]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem("lifesync_auth");
     localStorage.removeItem("lifesync_profile");
     sessionStorage.clear();
@@ -258,9 +245,12 @@ export default function App() {
     setLocationStatus("pending");
   };
 
-  const handleProfileSave = (updated: UserProfile) => {
+  const handleProfileSave = async (updated: UserProfile) => {
     setProfile(updated);
-    localStorage.setItem("lifesync_profile", JSON.stringify(updated));
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await supabase.from('profiles').update(updated).eq('id', session.user.id);
+    }
   };
 
   // Initials for avatar fallback

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
@@ -11,11 +11,16 @@ import Availability from './pages/Availability';
 import Ambulance from './pages/Ambulance';
 import AmbulanceDriver from './pages/AmbulanceDriver';
 import AuthPage, { getSession, clearSession } from './pages/AuthPage';
+import Gate from './pages/Gate';
+import UserAuth from './pages/UserAuth';
+
+import UserDashboard from './pages/UserDashboard';
 
 function AppShell({ user, onLogout }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const isDriverPage = location.pathname === '/ambulance-driver';
+  const isPatient = user?.role === 'user';
 
   return (
     <div className={`app-layout ${isSidebarOpen ? 'sidebar-open' : ''}`}>
@@ -27,13 +32,17 @@ function AppShell({ user, onLogout }) {
         />
       )}
 
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} user={user} onLogout={onLogout} />
+      {!isPatient && (
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} user={user} onLogout={onLogout} />
+      )}
 
-      <div className="main-content">
-        <Topbar onToggleSidebar={() => setSidebarOpen(!isSidebarOpen)} user={user} onLogout={onLogout} />
-        <div className={isDriverPage ? '' : 'page-wrapper'}>
+      <div className={isPatient ? "main-content-fluid" : "main-content"}>
+        {!isPatient && (
+          <Topbar onToggleSidebar={() => setSidebarOpen(!isSidebarOpen)} user={user} onLogout={onLogout} />
+        )}
+        <div className={isDriverPage || isPatient ? '' : 'page-wrapper'}>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route index element={isPatient ? <UserDashboard user={user} /> : <Home />} />
             <Route path="/hospital" element={<HospitalDetails />} />
             <Route path="/doctors" element={<Doctors />} />
             <Route path="/patients" element={<Patients />} />
@@ -57,23 +66,34 @@ function AppShell({ user, onLogout }) {
 
 export default function App() {
   const [user, setUser] = useState(() => getSession());
+  const [authView, setAuthView] = useState('gate'); // 'gate' | 'user' | 'hospital' | 'driver'
 
   function handleAuth(userData) {
+    localStorage.setItem('hms_session', JSON.stringify(userData));
     setUser(userData);
   }
 
   function handleLogout() {
     clearSession();
     setUser(null);
+    setAuthView('gate');
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/clinical-portal">
       {user ? (
         <AppShell user={user} onLogout={handleLogout} />
       ) : (
         <Routes>
-          <Route path="*" element={<AuthPage onAuth={handleAuth} />} />
+          <Route path="/" element={
+            authView === 'gate' ? <Gate onSelect={setAuthView} onAuth={handleAuth} /> :
+            authView === 'user' ? <UserAuth onAuth={handleAuth} /> :
+            authView === 'hospital' ? <AuthPage onAuth={handleAuth} /> :
+            authView === 'driver' ? <Navigate to="/ambulance-driver-portal" /> :
+            <Gate onSelect={setAuthView} onAuth={handleAuth} />
+          } />
+          <Route path="/ambulance-driver-portal" element={<AmbulanceDriver onAuth={handleAuth} />} />
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       )}
     </BrowserRouter>

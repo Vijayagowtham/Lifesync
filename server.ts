@@ -201,8 +201,12 @@ async function startServer() {
       }));
 
       return res.json(response);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Supabase Hospital Error:", err);
+      // If table is missing (PGRST116), don't 500, just return empty list and let seed logic handle it if possible
+      if (err?.code === 'PGRST116' || err?.message?.includes('relation "hospitals" does not exist')) {
+        return res.json([]);
+      }
       res.status(500).json({ error: "Failed to fetch hospitals" });
     }
   });
@@ -228,7 +232,11 @@ async function startServer() {
       }));
 
       return res.json(response);
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Supabase Ambulance Error:", err);
+      if (err?.code === 'PGRST116' || err?.message?.includes('relation "ambulances" does not exist')) {
+        return res.json([]);
+      }
       res.status(500).json({ error: "Failed to fetch ambulances" });
     }
   });

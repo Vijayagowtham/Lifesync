@@ -137,35 +137,53 @@ export default function App() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
 
-  // ── Auth Session Check ──
+  // ── Auth Session Check & Loading Timeout ──
   useEffect(() => {
+    let mounted = true;
+
+    // Safety timeout: Never stay in loading state more than 8 seconds
+    const safetyTimeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 8000);
+
     async function checkUser() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setIsLoggedIn(true);
-        // Fetch full profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profileData) {
-          setProfile(profileData);
-        } else {
-          setProfile({
-            name: session.user.email?.split('@')[0] || "User",
-            email: session.user.email || "",
-            avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.id}`
-          });
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+
+        if (mounted && session?.user) {
+          setIsLoggedIn(true);
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profileData) {
+            setProfile(profileData);
+          } else {
+            setProfile({
+              name: session.user.email?.split('@')[0] || "User",
+              email: session.user.email || "",
+              avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.id}`
+            });
+          }
+        }
+      } catch (err: any) {
+        console.error("Auth session check failed or timed out:", err);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+          clearTimeout(safetyTimeout);
         }
       }
-      setLoading(false);
     }
     checkUser();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
       if (event === 'SIGNED_IN' && session?.user) {
         setIsLoggedIn(true);
         const { data: profileData } = await supabase
@@ -177,10 +195,15 @@ export default function App() {
       } else if (event === 'SIGNED_OUT') {
         setIsLoggedIn(false);
         setProfile(DEFAULT_PROFILE);
+        setLocationStatus("pending");
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(safetyTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogin = (userData: UserProfile) => {
@@ -226,10 +249,11 @@ export default function App() {
           fetch(`/api/hospitals${params}`),
           fetch(`/api/ambulances${params}`),
         ]);
-        setHospitals(await hospRes.json());
-        setAmbulances(await ambRes.json());
+        
+        if (hospRes.ok) setHospitals(await hospRes.json());
+        if (ambRes.ok) setAmbulances(await ambRes.json());
       } catch (err) {
-        console.error("Error fetching data:", err);
+        console.error("Critical fetching error:", err);
       }
     };
     fetchData();

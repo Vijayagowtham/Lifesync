@@ -76,9 +76,8 @@ export default function Chatbot({ hospitals, isOpen: externalIsOpen, setIsOpen: 
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-
-  // Initialize Gemini
-  const genAI = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+  // Stable genAI instance - never re-create on re-render
+  const genAIRef = useRef(new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || "" }));
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -163,8 +162,8 @@ export default function Chatbot({ hospitals, isOpen: externalIsOpen, setIsOpen: 
       - If you don't know the answer, say "I'm sorry, I don't have that information. Please contact emergency services if this is an emergency."
       - Always prioritize emergency advice if the user seems to be in a life-threatening situation.`;
 
-      const model = "gemini-3-flash-preview";
-      const response = await genAI.models.generateContent({
+      const model = "gemini-2.0-flash-lite";
+      const response = await genAIRef.current.models.generateContent({
         model,
         contents: [
           { role: "user", parts: [{ text: systemPrompt }] },

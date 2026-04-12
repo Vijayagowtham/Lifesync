@@ -273,7 +273,10 @@ export default function App() {
     setProfile(updated);
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
-      await supabase.from('profiles').update(updated).eq('id', session.user.id);
+      await supabase.from('profiles').update({
+        name: updated.name,
+        avatar_url: updated.avatarUrl
+      }).eq('id', session.user.id);
     }
   };
 
@@ -293,6 +296,17 @@ export default function App() {
   ];
 
   // Show Login if not authenticated
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-500 font-medium">Loading LifeSync…</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isLoggedIn) {
     return <AuthPage onLogin={handleLogin} />;
   }

@@ -223,7 +223,7 @@ async function startServer() {
 
       if (error) throw error;
 
-      const response = data.map(a => ({
+      const response = (data || []).map(a => ({
         id: a.id,
         driverName: a.driver_name,
         contact: a.contact,

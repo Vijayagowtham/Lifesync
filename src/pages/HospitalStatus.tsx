@@ -278,6 +278,7 @@ export default function HospitalStatus({ hospitals, userLocation }: HospitalStat
                         </div>
                         <div className="h-64 rounded-2xl overflow-hidden shadow-inner border border-slate-200 relative z-0">
                           <MapContainer 
+                            center={[selectedHospital.lat, selectedHospital.lng]}
                             zoom={14} 
                             style={{ height: "100%", width: "100%", zIndex: 0 }}
                             scrollWheelZoom={false}

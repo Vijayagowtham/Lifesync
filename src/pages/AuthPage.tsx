@@ -133,11 +133,21 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
         }
       }
     } catch (err: any) {
-      console.error("Auth Error:", err);
-      if (err.message === "Failed to fetch" || err.name === "TypeError") {
-        setError("Network error: Could not reach Supabase. Please check your internet connection and ensure your Supabase project is active.");
+      console.error("Auth Error (full):", err);
+      // Only show 'network error' if it's truly a fetch failure with no response
+      const isNetworkError =
+        (err.message === "Failed to fetch" ||
+          err.message?.includes("NetworkError") ||
+          err.message?.includes("fetch")) &&
+        err.name === "TypeError";
+
+      if (isNetworkError) {
+        setError(
+          "Cannot connect to Supabase. Your project may be paused. Visit supabase.com/dashboard → your project → click 'Restore project', then try again."
+        );
       } else {
-        setError(err.message || "Authentication failed.");
+        // Show the real error message (e.g. "Email not confirmed", "Invalid login credentials")
+        setError(err.message || "Authentication failed. Please try again.");
       }
     } finally {
       setLoading(false);

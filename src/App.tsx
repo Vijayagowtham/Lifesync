@@ -308,7 +308,12 @@ export default function App() {
   }
 
   if (!isLoggedIn) {
-    return <AuthPage onLogin={handleLogin} />;
+    return (
+      <>
+        <AuthPage onLogin={handleLogin} onOpenChat={() => setChatOpen(true)} />
+        <Chatbot hospitals={[]} isOpen={chatOpen} setIsOpen={setChatOpen} />
+      </>
+    );
   }
 
   // Show location gate until granted

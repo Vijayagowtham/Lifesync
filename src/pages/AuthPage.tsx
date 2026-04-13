@@ -27,12 +27,13 @@ import { supabase } from "../lib/supabase";
 
 interface AuthPageProps {
   onLogin: (userData: any) => void;
+  onOpenChat?: () => void;
 }
 
 type AuthRole = "user" | "hospital";
 type AuthMode = "login" | "signup";
 
-export default function AuthPage({ onLogin }: AuthPageProps) {
+export default function AuthPage({ onLogin, onOpenChat }: AuthPageProps) {
   const [role, setRole] = useState<AuthRole>("user");
   const [mode, setMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
@@ -59,9 +60,7 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
 
   const handleSupportClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    setMode("login");
-    setIsSignupSuccess(false);
-    setError(null);
+    if (onOpenChat) onOpenChat();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -200,7 +199,7 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
              <a href="#" className="hover:text-primary transition-colors">Security</a>
              <button onClick={handleSupportClick} className="hover:text-primary transition-colors uppercase">Support</button>
           </div>
-          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary transition-colors rounded-full">
+          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary transition-colors rounded-full" onClick={handleSupportClick}>
             <HelpCircle className="w-5 h-5" />
           </Button>
         </div>
@@ -260,8 +259,8 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
               <img 
                 className="w-full h-full object-cover opacity-90 transition-transform duration-[3000ms] group-hover:scale-110" 
                 src={role === "user" 
-                  ? "https://images.unsplash.com/photo-1576091160550-217359f4ecf8?auto=format&fit=crop&q=80&w=2000" 
-                  : "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=2000"}
+                  ? "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=2000" 
+                  : "https://images.unsplash.com/photo-1551076805-e1869043e560?auto=format&fit=crop&q=80&w=2000"}
                 alt="Healthcare Innovation"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>

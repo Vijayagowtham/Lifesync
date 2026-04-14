@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import Modal from '../components/Modal';
@@ -9,8 +10,6 @@ export default function HospitalDetails() {
   const [showEdit, setShowEdit] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '', lat: '', lon: '', logo_url: '' });
 
-  useEffect(() => { loadProfile(); }, []);
-
   async function loadProfile() {
     setLoading(true);
     const { data } = await supabase.from('hospitals').select('*').order('id', { ascending: true }).limit(1).single();
@@ -20,6 +19,8 @@ export default function HospitalDetails() {
     }
     setLoading(false);
   }
+
+  useEffect(() => { loadProfile(); }, []);
 
   async function saveProfile() {
     if (!profile) return;

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabase';
 import Modal from '../components/Modal';

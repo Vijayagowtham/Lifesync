@@ -1,14 +1,17 @@
-{
-  "name": "react-example",
+  "name": "life-sync-monorepo",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "workspaces": [
+    "hospital-management-frontend"
+  ],
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build",
+    "dev:all": "npm run dev & npm run dev --workspace=hospital-management-frontend",
+    "build": "npm run build --workspaces && vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "clean": "rm -rf dist && npm run clean --workspaces",
+    "lint": "tsc --noEmit && npm run lint --workspaces"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

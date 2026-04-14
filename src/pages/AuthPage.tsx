@@ -74,42 +74,42 @@ export default function AuthPage({ onLogin, onOpenChat }: AuthPageProps) {
           throw new Error("Passwords do not match.");
         }
 
-        // 1. Sign up user via Flask backend
-        const response = await fetch("http://127.0.0.1:5000/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ email: formData.email, password: formData.password })
+        // 1. Sign up user via Supabase
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              name: formData.name || formData.username,
+              role: role,
+            }
+          }
         });
-        
-        if (!response.ok) {
-          throw new Error("Failed to register. Please try again.");
-        }
-        
-        const data = await response.json();
-        const authData = { user: { id: 'temp-id', email: formData.email } };
 
-        
-        // Manual profile creation removed: Handled by DB trigger for robustness.
+        if (signUpError) throw signUpError;
+        if (!authData.user) throw new Error("Registration failed.");
+
+        // Manual profile update (Trigger might also handle this, but for robustness we ensure role)
+        await supabase.from('profiles').upsert({
+          id: authData.user.id,
+          name: formData.name || formData.username,
+          email: formData.email,
+          role: role,
+          blood_group: formData.bloodGroup,
+          phone: formData.phone,
+          location: formData.location
+        });
+
         setIsSignupSuccess(true);
       } else {
-        // 1. Sign in using Flask backend
-        const response = await fetch("http://127.0.0.1:5000/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ email: formData.email, password: formData.password })
+        // 1. Sign in using Supabase
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password
         });
         
-        if (!response.ok) {
-          throw new Error("Invalid login credentials");
-        }
-        
-        const data = await response.json();
-        const authData = { user: { id: 'temp-id', email: data.user?.email || formData.email } };
-
+        if (signInError) throw signInError;
+        if (!authData.user) throw new Error("Invalid login credentials");
 
         // 2. Fetch profile
         const { data: profileData, error: profileError } = await supabase
@@ -119,7 +119,7 @@ export default function AuthPage({ onLogin, onOpenChat }: AuthPageProps) {
           .single();
 
         if (profileError) {
-          // Fallback if profile doesn't exist yet
+          // Fallback if profile doesn't exist yet (e.g. legacy users)
           const fallback = {
             name: authData.user.email?.split('@')[0] || "User",
             email: authData.user.email,
@@ -144,21 +144,7 @@ export default function AuthPage({ onLogin, onOpenChat }: AuthPageProps) {
       }
     } catch (err: any) {
       console.error("Auth Error (full):", err);
-      // Only show 'network error' if it's truly a fetch failure with no response
-      const isNetworkError =
-        (err.message === "Failed to fetch" ||
-          err.message?.includes("NetworkError") ||
-          err.message?.includes("fetch")) &&
-        err.name === "TypeError";
-
-      if (isNetworkError) {
-        setError(
-          "Cannot connect to Supabase. Your project may be paused. Visit supabase.com/dashboard → your project → click 'Restore project', then try again."
-        );
-      } else {
-        // Show the real error message (e.g. "Email not confirmed", "Invalid login credentials")
-        setError(err.message || "Authentication failed. Please try again.");
-      }
+      setError(err.message || "Authentication failed. Please try again.");
     } finally {
       setLoading(false);
     }

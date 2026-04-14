@@ -64,9 +64,31 @@ function AppShell({ user, onLogout }) {
   );
 }
 
+import { supabase } from './supabase';
+
 export default function App() {
   const [user, setUser] = useState(() => getSession());
   const [authView, setAuthView] = useState('gate'); // 'gate' | 'user' | 'hospital' | 'driver'
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    async function recoverSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && !user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile) {
+          handleAuth(profile);
+        }
+      }
+      setAuthLoading(false);
+    }
+    recoverSession();
+  }, []);
 
   function handleAuth(userData) {
     localStorage.setItem('hms_session', JSON.stringify(userData));

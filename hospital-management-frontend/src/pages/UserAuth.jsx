@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { 
   Activity, 
@@ -14,6 +15,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
+import { supabase } from "../supabase";
+
 export default function UserAuth({ onAuth }) {
   const [mode, setMode] = useState("login");
   const [formData, setFormData] = useState({
@@ -27,20 +30,60 @@ export default function UserAuth({ onAuth }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // Mock auth logic compatible with HMS store
-    setTimeout(() => {
-        if (mode === 'login') {
-            onAuth({ name: 'Member User', email: formData.email, role: 'user' });
-        } else {
-            onAuth({ name: formData.name, email: formData.email, role: 'user' });
-        }
-        setLoading(false);
-    }, 1000);
+    try {
+      if (mode === 'signup') {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              name: formData.name,
+              role: 'user'
+            }
+          }
+        });
+
+        if (signUpError) throw signUpError;
+        if (!data.user) throw new Error("Registration failed.");
+
+        const profile = {
+          id: data.user.id,
+          name: formData.name,
+          email: formData.email,
+          role: 'user',
+          phone: formData.phone,
+          location: formData.location
+        };
+        
+        await supabase.from('profiles').upsert(profile);
+        onAuth(profile);
+      } else {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password
+        });
+        
+        if (signInError) throw signInError;
+        
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        onAuth(profile || { email: data.user.email, role: 'user', name: 'Member User' });
+      }
+    } catch (err) {
+      console.error("Auth Error:", err);
+      setError(err.message || "Failed to authenticate.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

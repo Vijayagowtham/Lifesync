@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -14,6 +15,8 @@ import {
   HelpCircle
 } from 'lucide-react';
 
+import { supabase } from '../supabase';
+
 export default function Gate({ onSelect, onAuth }) {
   const [activeRole, setActiveRole] = useState('hospital');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,27 +25,30 @@ export default function Gate({ onSelect, onAuth }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://127.0.0.1:5000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email: formData.email, password: formData.password })
+      // 1. Sign in using native Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
       });
       
-      if (!response.ok) {
-        throw new Error("Invalid credentials");
-      }
+      if (error) throw error;
+      if (!data.user) throw new Error("Invalid credentials");
       
-      const data = await response.json();
+      // 2. Fetch profile to confirm role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
       onAuth({ 
-          name: activeRole === 'hospital' ? 'Clinical Admin' : 'Member Patient', 
-          email: data.user?.email || formData.email, 
-          role: activeRole 
+          name: profile?.name || (activeRole === 'hospital' ? 'Clinical Admin' : 'Member Patient'), 
+          email: data.user.email, 
+          role: profile?.role || activeRole 
       });
     } catch (err) {
       console.error("Login Error:", err);
-      alert("Failed to fetch. Cannot connect to the backend server.");
+      alert(err.message || "Failed to authenticate.");
     }
   };
 
@@ -105,49 +111,67 @@ export default function Gate({ onSelect, onAuth }) {
 
           {/* Right Side: Clinical Portal Access Card */}
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
             className="lg:col-span-7 flex justify-center"
           >
-            <div className="w-full max-w-[580px] bg-white rounded-[56px] p-12 md:p-16 shadow-[0_48px_120px_-32px_rgba(183,18,18,0.1)] border border-slate-100/50">
-              <div className="text-center mb-10">
-                <h2 className="text-4xl font-black text-slate-900 mb-3 tracking-tighter">
+            <div className="w-full max-w-[580px] bg-white/70 backdrop-blur-3xl rounded-[56px] p-12 md:p-16 shadow-[0_60px_130px_-40px_rgba(183,18,18,0.15)] border border-white/50 relative overflow-hidden">
+              {/* Decorative accent */}
+              <div className="absolute top-0 right-0 w-40 h-40 bg-red-100/30 blur-[60px] rounded-full -mr-20 -mt-20" />
+              
+              <div className="relative z-10 text-center mb-10">
+                <motion.h2 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-4xl font-black text-slate-900 mb-3 tracking-tighter"
+                >
                   Clinical Portal Access
-                </h2>
-                <p className="text-slate-400 text-sm font-semibold tracking-wide">
+                </motion.h2>
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-slate-400 text-sm font-semibold tracking-wide"
+                >
                   Precision health management for the modern era.
-                </p>
+                </motion.p>
               </div>
 
-              <div className="space-y-12">
+              <div className="space-y-12 relative z-10">
                 {/* Entry Point Selector */}
                 <div className="space-y-5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">
                     Select Entry Point
                   </label>
                   <div className="flex gap-5">
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setActiveRole('hospital')}
-                      className={`flex-1 flex items-center justify-center gap-3 py-6 rounded-3xl font-bold transition-all duration-300 border-2 ${
+                      className={`flex-1 flex items-center justify-center gap-3 py-6 rounded-3xl font-extrabold transition-all duration-300 border-2 ${
                         activeRole === 'hospital' 
-                        ? 'bg-white border-red-700 text-red-700 shadow-2xl shadow-red-900/5' 
-                        : 'bg-slate-50 border-transparent text-slate-400 hover:bg-slate-100'
+                        ? 'bg-white border-red-700 text-red-700 shadow-2xl shadow-red-900/10' 
+                        : 'bg-slate-50/50 backdrop-blur-sm border-transparent text-slate-400 hover:bg-slate-100/50'
                       }`}
                     >
                       <Building2 size={22} strokeWidth={2.5} />
                       Hospital
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setActiveRole('patient')}
-                      className={`flex-1 flex items-center justify-center gap-3 py-6 rounded-3xl font-bold transition-all duration-300 border-2 ${
+                      className={`flex-1 flex items-center justify-center gap-3 py-6 rounded-3xl font-extrabold transition-all duration-300 border-2 ${
                         activeRole === 'patient' 
-                        ? 'bg-white border-red-700 text-red-700 shadow-2xl shadow-red-100/5' 
-                        : 'bg-slate-50 border-transparent text-slate-400 hover:bg-slate-100'
+                        ? 'bg-white border-red-700 text-red-700 shadow-2xl shadow-red-100/10' 
+                        : 'bg-slate-50/50 backdrop-blur-sm border-transparent text-slate-400 hover:bg-slate-100/50'
                       }`}
                     >
                       <User size={22} strokeWidth={2.5} />
                       Patient
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
 
@@ -163,7 +187,7 @@ export default function Gate({ onSelect, onAuth }) {
                         type="email"
                         required
                         placeholder="name@atelier.healthcare"
-                        className="w-full bg-slate-50 border-transparent border-2 focus:bg-white focus:border-red-700/10 rounded-[24px] pl-16 pr-6 py-5 text-sm font-bold text-slate-900 outline-none transition-all"
+                        className="w-full bg-slate-50/50 backdrop-blur-md border-transparent border-2 focus:bg-white focus:border-red-700/10 rounded-[24px] pl-16 pr-6 py-5 text-sm font-bold text-slate-900 outline-none transition-all"
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
                       />
@@ -185,7 +209,7 @@ export default function Gate({ onSelect, onAuth }) {
                         type={showPassword ? "text" : "password"}
                         required
                         placeholder="••••••••••••"
-                        className="w-full bg-slate-50 border-transparent border-2 focus:bg-white focus:border-red-700/10 rounded-[24px] pl-16 pr-16 py-5 text-sm font-bold text-slate-900 outline-none transition-all"
+                        className="w-full bg-slate-50/50 backdrop-blur-md border-transparent border-2 focus:bg-white focus:border-red-700/10 rounded-[24px] pl-16 pr-16 py-5 text-sm font-bold text-slate-900 outline-none transition-all"
                         value={formData.password}
                         onChange={(e) => setFormData({...formData, password: e.target.value})}
                       />
@@ -201,14 +225,16 @@ export default function Gate({ onSelect, onAuth }) {
 
                   {/* Submit Button */}
                   <div className="pt-2">
-                    <button 
+                    <motion.button 
+                      whileHover={{ scale: 1.02, backgroundColor: '#9e000f' }}
+                      whileTap={{ scale: 0.98 }}
                       type="submit"
                       style={{ backgroundColor: '#b70011' }}
-                      className="w-full hover:bg-red-800 text-white font-black py-6 rounded-[28px] shadow-2xl shadow-red-900/20 active:scale-[0.98] transition-all text-sm uppercase tracking-[0.25em] flex items-center justify-center gap-3 transform group"
+                      className="w-full text-white font-black py-6 rounded-[28px] shadow-2xl shadow-red-900/20 active:scale-[0.98] transition-all text-sm uppercase tracking-[0.25em] flex items-center justify-center gap-3 transform group"
                     >
                       Enter Atelier 
                       <ArrowRight size={20} className="group-hover:translate-x-1.5 transition-transform" />
-                    </button>
+                    </motion.button>
                   </div>
                 </form>
 

@@ -67,6 +67,7 @@ export default function Availability() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
     const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);

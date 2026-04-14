@@ -74,31 +74,42 @@ export default function AuthPage({ onLogin, onOpenChat }: AuthPageProps) {
           throw new Error("Passwords do not match.");
         }
 
-        // 1. Sign up user
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              username: formData.username || formData.name,
-              hospitalName: formData.hospitalName,
-              role: role,
-            }
-          }
+        // 1. Sign up user via Flask backend
+        const response = await fetch("http://127.0.0.1:5000/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email: formData.email, password: formData.password })
         });
+        
+        if (!response.ok) {
+          throw new Error("Failed to register. Please try again.");
+        }
+        
+        const data = await response.json();
+        const authData = { user: { id: 'temp-id', email: formData.email } };
 
-        if (authError) throw authError;
         
         // Manual profile creation removed: Handled by DB trigger for robustness.
         setIsSignupSuccess(true);
       } else {
-        // 1. Sign in
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
+        // 1. Sign in using Flask backend
+        const response = await fetch("http://127.0.0.1:5000/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email: formData.email, password: formData.password })
         });
+        
+        if (!response.ok) {
+          throw new Error("Invalid login credentials");
+        }
+        
+        const data = await response.json();
+        const authData = { user: { id: 'temp-id', email: data.user?.email || formData.email } };
 
-        if (authError) throw authError;
 
         // 2. Fetch profile
         const { data: profileData, error: profileError } = await supabase

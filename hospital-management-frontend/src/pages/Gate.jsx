@@ -19,13 +19,31 @@ export default function Gate({ onSelect, onAuth }) {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onAuth({ 
-        name: activeRole === 'hospital' ? 'Clinical Admin' : 'Member Patient', 
-        email: formData.email, 
-        role: activeRole 
-    });
+    try {
+      const response = await fetch("http://127.0.0.1:5000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email: formData.email, password: formData.password })
+      });
+      
+      if (!response.ok) {
+        throw new Error("Invalid credentials");
+      }
+      
+      const data = await response.json();
+      onAuth({ 
+          name: activeRole === 'hospital' ? 'Clinical Admin' : 'Member Patient', 
+          email: data.user?.email || formData.email, 
+          role: activeRole 
+      });
+    } catch (err) {
+      console.error("Login Error:", err);
+      alert("Failed to fetch. Cannot connect to the backend server.");
+    }
   };
 
   return (

@@ -63,7 +63,7 @@ export default function AuthPage({ onAuth }) {
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setError(''); };
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -93,10 +93,27 @@ export default function AuthPage({ onAuth }) {
         setError('Please enter your email and password.');
         setLoading(false); return;
       }
-      const user = findUser(form.email, form.password);
-      if (!user) { setError('Invalid email or password.'); setLoading(false); return; }
-      saveSession(user);
-      onAuth(user);
+      try {
+        const response = await fetch("http://127.0.0.1:5000/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email: form.email, password: form.password })
+        });
+        
+        if (!response.ok) {
+          throw new Error("Invalid email or password.");
+        }
+        
+        const data = await response.json();
+        const user = data.user || { email: form.email, hospitalName: 'Hospital' };
+        saveSession(user);
+        onAuth(user);
+      } catch (err) {
+        console.error("Login Error:", err);
+        setError("Failed to fetch. Cannot connect to the server.");
+      }
     }
     setLoading(false);
   }

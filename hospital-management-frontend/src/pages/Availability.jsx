@@ -56,14 +56,24 @@ export default function Availability() {
 
   async function loadData() {
     setLoading(true);
-    // Single hospital fetch
-    const { data: hosp } = await supabase.from('hospitals').select('id').order('id').limit(1).single();
-    if (hosp) {
-      const { data: avail } = await supabase.from('hospital_availability').select('*').eq('hospital_id', hosp.id).maybeSingle();
-      setData(avail || {});
+    try {
+      // Single hospital fetch
+      const { data: hosp, error: hospErr } = await supabase.from('hospitals').select('id').order('id').limit(1).single();
+      if (hospErr) throw hospErr;
+      
+      if (hosp) {
+        const { data: avail, error: availErr } = await supabase.from('hospital_availability').select('*').eq('hospital_id', hosp.id).maybeSingle();
+        if (availErr) throw availErr;
+        setData(avail || {});
+      }
+    } catch (err) {
+      console.error("Failed to load availability data:", err);
+      // Fallback to empty data to avoid crash
+      setData({});
+    } finally {
+      setLastRefreshed(new Date());
+      setLoading(false);
     }
-    setLastRefreshed(new Date());
-    setLoading(false);
   }
 
   useEffect(() => {

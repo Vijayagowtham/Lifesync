@@ -43,10 +43,16 @@ export default function Doctors() {
   }, []);
 
   async function loadDoctors() {
-    const { data } = await supabase.from('doctors').select('*').order('name');
-    setDoctors(data || []);
-    setFiltered(data || []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.from('doctors').select('*').order('name');
+      if (error) throw error;
+      setDoctors(data || []);
+      setFiltered(data || []);
+    } catch (err) {
+      console.error("Failed to load doctors:", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Helper to strictly force download with extension

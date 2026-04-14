@@ -5,6 +5,7 @@ DROP POLICY IF EXISTS "Users can update their own profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Users can insert their own profiles" ON public.profiles;
 
 DROP TABLE IF EXISTS public.appointments CASCADE;
+DROP TABLE IF EXISTS public.hospital_availability CASCADE;
 DROP TABLE IF EXISTS public.patients CASCADE;
 DROP TABLE IF EXISTS public.doctors CASCADE;
 DROP TABLE IF EXISTS public.ambulance_requests CASCADE;
@@ -108,12 +109,54 @@ CREATE TABLE IF NOT EXISTS public.ambulance_requests (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Hospital Availability: Real-time resource metrics
+CREATE TABLE IF NOT EXISTS public.hospital_availability (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  hospital_id UUID REFERENCES public.hospitals(id) ON DELETE CASCADE,
+  beds_total INTEGER DEFAULT 0,
+  beds_occupied INTEGER DEFAULT 0,
+  icu_total INTEGER DEFAULT 0,
+  icu_occupied INTEGER DEFAULT 0,
+  emergency_total INTEGER DEFAULT 0,
+  emergency_occupied INTEGER DEFAULT 0,
+  ot_total INTEGER DEFAULT 0,
+  ot_in_use INTEGER DEFAULT 0,
+  ventilators_total INTEGER DEFAULT 0,
+  ventilators_in_use INTEGER DEFAULT 0,
+  dialysis_units_total INTEGER DEFAULT 0,
+  dialysis_units_in_use INTEGER DEFAULT 0,
+  ambulances_total INTEGER DEFAULT 0,
+  ambulances_available INTEGER DEFAULT 0,
+  pharmacy_open BOOLEAN DEFAULT true,
+  pharmacy_24hr BOOLEAN DEFAULT false,
+  lab_open BOOLEAN DEFAULT true,
+  lab_24hr BOOLEAN DEFAULT false,
+  xray_available BOOLEAN DEFAULT true,
+  ct_scan_available BOOLEAN DEFAULT true,
+  mri_available BOOLEAN DEFAULT true,
+  ultrasound_available BOOLEAN DEFAULT true,
+  blood_a_pos INTEGER DEFAULT 0,
+  blood_a_neg INTEGER DEFAULT 0,
+  blood_b_pos INTEGER DEFAULT 0,
+  blood_b_neg INTEGER DEFAULT 0,
+  blood_o_pos INTEGER DEFAULT 0,
+  blood_o_neg INTEGER DEFAULT 0,
+  blood_ab_pos INTEGER DEFAULT 0,
+  blood_ab_neg INTEGER DEFAULT 0,
+  nurses_on_duty INTEGER DEFAULT 0,
+  support_staff_count INTEGER DEFAULT 0,
+  oxygen_cylinders INTEGER DEFAULT 0,
+  wheelchair_available INTEGER DEFAULT 0,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- 3. ENABLE RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hospitals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.doctors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.patients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.hospital_availability ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ambulances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ambulance_requests ENABLE ROW LEVEL SECURITY;
 
@@ -139,6 +182,11 @@ CREATE POLICY "Users can insert their own profiles" ON public.profiles FOR INSER
 -- Hospitals
 CREATE POLICY "Anyone can view hospitals" ON public.hospitals FOR SELECT USING (true);
 CREATE POLICY "Admins manage hospitals" ON public.hospitals FOR ALL 
+USING (public.get_role(auth.uid()) = 'hospital');
+
+-- Hospital Availability
+CREATE POLICY "Anyone can view availability" ON public.hospital_availability FOR SELECT USING (true);
+CREATE POLICY "Admins manage availability" ON public.hospital_availability FOR ALL 
 USING (public.get_role(auth.uid()) = 'hospital');
 
 -- Doctors

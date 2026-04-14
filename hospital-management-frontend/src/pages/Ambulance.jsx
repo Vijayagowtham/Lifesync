@@ -28,21 +28,33 @@ export default function Ambulance() {
   }, []);
 
   async function loadAmbulances() {
-    const { data } = await supabase.from('ambulances').select('*').order('created_at', { ascending: false });
-    setAmbulances(data || []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.from('ambulances').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      setAmbulances(data || []);
+    } catch (err) {
+      console.error("Failed to load ambulances:", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function saveAmbulance() {
     setSaving(true);
-    const { data: hosp } = await supabase.from('hospitals').select('id').limit(1).single();
-    const { error } = await supabase.from('ambulances').insert({ ...form, hospital_id: hosp?.id || null });
-    
-    if (error) alert("Failed to add ambulance: " + error.message);
-    
-    setShowAdd(false);
-    setForm({ vehicle_no: '', model: '', driver_name: '', driver_phone: '', status: 'Available' });
-    setSaving(false);
+    try {
+      const { data: hosp, error: hospError } = await supabase.from('hospitals').select('id').limit(1).single();
+      if (hospError) throw hospError;
+      
+      const { error } = await supabase.from('ambulances').insert({ ...form, hospital_id: hosp?.id || null });
+      if (error) throw error;
+      
+      setShowAdd(false);
+      setForm({ vehicle_no: '', model: '', driver_name: '', driver_phone: '', status: 'Available' });
+    } catch (err) {
+      alert("Error: " + (err.message || "Failed to save ambulance record."));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function deleteData() {
@@ -53,7 +65,13 @@ export default function Ambulance() {
   }
 
   async function updateStatus(id, newStatus) {
-    await supabase.from('ambulances').update({ status: newStatus }).eq('id', id);
+    try {
+      const { error } = await supabase.from('ambulances').update({ status: newStatus }).eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      alert("Failed to update status: " + err.message);
+      loadAmbulances(); // Revert UI
+    }
   }
 
   const filtered = ambulances.filter(a => 

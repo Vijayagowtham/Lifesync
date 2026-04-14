@@ -11,9 +11,15 @@ export default function Patients() {
   const [loading, setLoading] = useState(true);
 
   async function loadPatients() {
-    const { data } = await supabase.from('patients').select('*').order('created_at', { ascending: false });
-    setPatients(data || []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.from('patients').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      setPatients(data || []);
+    } catch (err) {
+      console.error("Failed to load patients:", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { loadPatients(); }, []);

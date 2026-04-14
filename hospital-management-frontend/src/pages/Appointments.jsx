@@ -13,22 +13,35 @@ export default function Appointments() {
   const [filter, setFilter] = useState('All');
 
   async function loadData() {
-    const [{ data: appts }, { data: pats }, { data: docs }] = await Promise.all([
-      supabase.from('appointments').select('*, doctors(name, specialization), patients(full_name, phone)').order('appointment_date', { ascending: false }),
-      supabase.from('patients').select('id, full_name').order('full_name'),
-      supabase.from('doctors').select('id, name, specialization').order('name'),
-    ]);
-    setAppointments(appts || []);
-    setPatients(pats || []);
-    setDoctors(docs || []);
-    setLoading(false);
+    try {
+      const [{ data: appts, error: err1 }, { data: pats, error: err2 }, { data: docs, error: err3 }] = await Promise.all([
+        supabase.from('appointments').select('*, doctors(name, specialization), patients(full_name, phone)').order('appointment_date', { ascending: false }),
+        supabase.from('patients').select('id, full_name').order('full_name'),
+        supabase.from('doctors').select('id, name, specialization').order('name'),
+      ]);
+      if (err1) throw err1;
+      if (err2) throw err2;
+      if (err3) throw err3;
+      setAppointments(appts || []);
+      setPatients(pats || []);
+      setDoctors(docs || []);
+    } catch (err) {
+      console.error("Failed to load appointments:", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { loadData(); }, []);
   async function updateStatus(id, newStatus) {
     if (confirm(`Mark appointment as ${newStatus}?`)) {
-      await supabase.from('appointments').update({ status: newStatus }).eq('id', id);
-      loadData();
+      try {
+        const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', id);
+        if (error) throw error;
+        loadData();
+      } catch (err) {
+        alert("Failed to update appointment: " + err.message);
+      }
     }
   }
 

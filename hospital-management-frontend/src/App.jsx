@@ -8,6 +8,7 @@ import Doctors from './pages/Doctors';
 import Patients from './pages/Patients';
 import Appointments from './pages/Appointments';
 import Availability from './pages/Availability';
+import Analytics from './pages/Analytics';
 import Ambulance from './pages/Ambulance';
 import AmbulanceDriver from './pages/AmbulanceDriver';
 import AuthPage, { getSession, clearSession } from './pages/AuthPage';
@@ -48,6 +49,7 @@ function AppShell({ user, onLogout }) {
             <Route path="/patients" element={<Patients />} />
             <Route path="/appointments" element={<Appointments />} />
             <Route path="/availability" element={<Availability />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/ambulance" element={<Ambulance />} />
             <Route path="/ambulance-driver" element={<AmbulanceDriver />} />
             <Route path="*" element={

@@ -138,12 +138,64 @@ export const useAmbulanceState = () => {
     setRequests([]);
   }, []);
 
-  const updateDriverLocation = useCallback((lat, lng) => {
+  const updateDriverLocation = useCallback(async (lat, lng, speed = 0, heading = 0) => {
     setDriver(prev => ({
       ...prev,
-      currentLocation: { ...prev.currentLocation, lat, lng }
+      currentLocation: { ...prev.currentLocation, lat, lng },
+      currentSpeed: speed,
+      heading: heading
     }));
-  }, []);
+
+    // Broadcast to Supabase for other users/dashboards
+    await supabase.from('ambulances').update({ lat, lng }).eq('id', driver.id);
+  }, [driver.id]);
+
+  // ── Simulation Mode Logic ──
+  useEffect(() => {
+    if (!driver.isOnline || !activeRide) return;
+
+    const interval = setInterval(() => {
+      setDriver(prev => {
+        const targetLat = activeRide.lat;
+        const targetLng = activeRide.lng;
+        const curLat = prev.currentLocation.lat;
+        const curLng = prev.currentLocation.lng;
+
+        // Simple linear interpolation for simulation
+        const step = 0.0005; // speed factor
+        const diffLat = targetLat - curLat;
+        const diffLng = targetLng - curLng;
+        const distance = Math.sqrt(diffLat * diffLat + diffLng * diffLng);
+
+        if (distance < step) {
+          clearInterval(interval);
+          return prev;
+        }
+
+        const nextLat = curLat + (diffLat / distance) * step;
+        const nextLng = curLng + (diffLng / distance) * step;
+        
+        // Calculate heading (angle)
+        const angle = Math.atan2(diffLng, diffLat) * (180 / Math.PI);
+
+        // Update database (Throttled ideally, but for simulation every tick is fine)
+        supabase.from('ambulances').update({ 
+          lat: nextLat, 
+          lng: nextLng, 
+          status: 'On Call' 
+        }).eq('id', prev.id).then();
+
+        return {
+          ...prev,
+          currentLocation: { ...prev.currentLocation, lat: nextLat, lng: nextLng },
+          currentSpeed: Math.floor(Math.random() * 20) + 40, // 40-60 km/h
+          heading: angle
+        };
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [driver.isOnline, activeRide]);
 
   return {
     driver,

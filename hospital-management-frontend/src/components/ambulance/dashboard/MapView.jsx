@@ -54,6 +54,26 @@ const MapController = ({ driverLocation, patientLocation }) => {
 };
 
 export default function MapView({ driverLocation, patientLocation, activeRide }) {
+  const [ambulances, setAmbulances] = React.useState([]);
+
+  React.useEffect(() => {
+    // 1. Fetch initial ambulances
+    const fetchAmbs = async () => {
+      const { data } = await supabase.from('ambulances').select('*');
+      setAmbulances(data || []);
+    };
+    fetchAmbs();
+
+    // 2. Realtime subscription to movement
+    const channel = supabase.channel('maps-telemetry')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ambulances' }, (payload) => {
+        setAmbulances(prev => prev.map(a => a.id === payload.new.id ? payload.new : a));
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, []);
+
   const routePositions = patientLocation ? [
     [driverLocation.lat, driverLocation.lng],
     [patientLocation.lat, patientLocation.lng]
@@ -72,14 +92,23 @@ export default function MapView({ driverLocation, patientLocation, activeRide })
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
         
-        <Marker position={[driverLocation.lat, driverLocation.lng]} icon={driverPulseIcon}>
-          <Popup className="premium-popup">
-            <div className="p-1">
-              <p className="font-black text-xs uppercase tracking-widest text-[#1a1c22]">Your Unit</p>
-              <p className="text-[10px] text-gray-400 mt-1">{driverLocation.address}</p>
-            </div>
-          </Popup>
-        </Marker>
+        {/* Render ALL fleet vehicles */}
+        {ambulances.map(amb => (
+          amb.lat && amb.lng && (
+            <Marker 
+              key={amb.id} 
+              position={[amb.lat, amb.lng]} 
+              icon={amb.id === 'drv-101' ? driverPulseIcon : L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048315.png', iconSize: [25, 25] })}
+            >
+              <Popup className="premium-popup">
+                <div className="p-1">
+                  <p className="font-black text-xs uppercase tracking-widest text-[#1a1c22]">{amb.vehicle_no}</p>
+                  <p className="text-[10px] text-emerald-600 font-bold uppercase">{amb.status}</p>
+                </div>
+              </Popup>
+            </Marker>
+          )
+        ))}
 
         {patientLocation && (
           <>

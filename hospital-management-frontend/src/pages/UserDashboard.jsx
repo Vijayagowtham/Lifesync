@@ -24,25 +24,42 @@ export default function UserDashboard({ user }) {
   const [userLocation, setUserLocation] = useState([13.0827, 80.2707]); // Default Chennai
   const [locationStatus, setLocationStatus] = useState('granted');
   const [aiInsight, setAiInsight] = useState('Analyzing health telemetry...');
+  const [chatVisible, setChatVisible] = useState(false);
+  const [query, setQuery] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const triageChips = [
+    "I have a severe headache",
+    "Where is the nearest ICU?",
+    "Is my heart rate normal?",
+    "Hospital with O+ blood"
+  ];
+
+  const fetchInsights = async (customQuery = null) => {
+    setChatLoading(true);
+    try {
+      const AI_URL = import.meta.env.VITE_AI_API_URL || 'http://127.0.0.1:5000/api';
+      const res = await fetch(`${AI_URL}/insights`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          query: customQuery || 'Provide a brief summary based on my pulse.',
+          vitals: { bpm: 72, temp: 98.6 },
+          location: userLocation
+        })
+      });
+      const data = await res.json();
+      setAiInsight(data.insight);
+      if (customQuery) setChatVisible(true);
+    } catch (err) {
+      setAiInsight('Environmental sensors active. System monitoring in progress.');
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Fetch AI insights from Flask backend
-    const fetchInsights = async () => {
-      try {
-        const AI_URL = import.meta.env.VITE_AI_API_URL || 'http://127.0.0.1:5000/api';
-        const res = await fetch(`${AI_URL}/insights`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ vitals: { bpm: 72 } })
-        });
-        const data = await res.json();
-        setAiInsight(data.insight);
-      } catch (err) {
-        setAiInsight('Environmental sensors active. System monitoring in progress.');
-      }
-    };
     fetchInsights();
-
     // Simulate data fetch
     setTimeout(() => {
         setHospitals([
@@ -106,7 +123,6 @@ export default function UserDashboard({ user }) {
                     <MapPin size={14} className="text-red-600" />
                     <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Nearby Hospitals</span>
                 </div>
-                {/* Integration with existing MapView */}
                 <MapView center={userLocation} zoom={13} markers={hospitals} />
                 <div className="absolute inset-0 pointer-events-none border-[12px] border-white/5 shadow-inner rounded-[32px]"></div>
             </motion.div>
@@ -142,19 +158,52 @@ export default function UserDashboard({ user }) {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.6 }}
-                  className="p-8 bg-gradient-to-br from-red-700 to-red-900 rounded-[32px] text-white relative overflow-hidden shadow-2xl hover:brightness-110 transition-all cursor-pointer"
+                  className="p-8 bg-gradient-to-br from-red-700 to-red-900 rounded-[32px] text-white relative overflow-hidden shadow-2xl transition-all"
                 >
                     <Sparkles className="absolute -top-4 -right-4 w-32 h-32 opacity-10" />
                     <div className="relative z-10">
-                        <h3 className="flex items-center gap-2 font-black text-sm uppercase tracking-[0.2em] mb-6">
-                            <Sparkles size={16} /> AI Assistant
-                        </h3>
-                        <p className="text-lg font-medium leading-relaxed mb-8">
-                            {aiInsight}
-                        </p>
-                        <button className="px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">
-                            Open Full Analysis
-                        </button>
+                        <div className="flex justify-between items-center mb-6">
+                          <h3 className="flex items-center gap-2 font-black text-sm uppercase tracking-[0.2em]">
+                              <Sparkles size={16} /> LifeSync Carebot
+                          </h3>
+                          {chatLoading && <Loader2 className="animate-spin" size={16} />}
+                        </div>
+
+                        <div className="max-h-[120px] overflow-y-auto mb-6 custom-scrollbar">
+                           <p className="text-lg font-medium leading-relaxed italic opacity-90">
+                              "{aiInsight}"
+                           </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-6">
+                           {triageChips.map((chip, i) => (
+                             <button
+                               key={i}
+                               onClick={() => fetchInsights(chip)}
+                               className="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/5 rounded-full text-[10px] font-bold tracking-wide transition-all"
+                             >
+                               {chip}
+                             </button>
+                           ))}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Ask Carebot anything..."
+                            className="flex-1 bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:bg-white/20 transition-all"
+                            onKeyPress={(e) => e.key === 'Enter' && fetchInsights(query)}
+                          />
+                          <button 
+                            onClick={() => fetchInsights(query)}
+                            disabled={chatLoading}
+                            className="p-3 bg-white text-red-900 rounded-2xl hover:scale-105 transition-all"
+                          >
+                            <MessageSquare size={18} />
+                          </button>
+                        </div>
                     </div>
                 </motion.div>
             </div>

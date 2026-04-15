@@ -91,6 +91,8 @@ CREATE TABLE IF NOT EXISTS public.ambulances (
   driver_name TEXT,
   driver_phone TEXT,
   status TEXT DEFAULT 'Available', -- 'Available' | 'On Call' | 'Maintenance'
+  lat DOUBLE PRECISION,
+  lng DOUBLE PRECISION,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

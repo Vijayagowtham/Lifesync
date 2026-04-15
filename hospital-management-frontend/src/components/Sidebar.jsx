@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Hospital, Stethoscope, Users,
-  CalendarDays, Activity, Heart, Ambulance, X, LogOut
+  CalendarDays, Activity, Heart, Ambulance, X, LogOut, TrendingUp
 } from 'lucide-react';
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/patients', icon: Users, label: 'Patients' },
   { to: '/appointments', icon: CalendarDays, label: 'Booked Appointments' },
   { to: '/availability', icon: Activity, label: 'Availability' },
+  { to: '/analytics', icon: TrendingUp, label: 'Analytics' },
   { to: '/ambulance', icon: Ambulance, label: 'Ambulance History' },
   { to: '/ambulance-driver', icon: Users, label: 'Ambulance Requests' },
 ];

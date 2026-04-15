@@ -95,9 +95,7 @@ export default function AuthPage({ onAuth }) {
           id: data.user.id,
           name: form.hospitalName,
           email: form.email,
-          role: 'hospital',
-          phone: form.phone,
-          location: form.location
+          role: 'hospital'
         };
         
         await supabase.from('profiles').upsert(profile);

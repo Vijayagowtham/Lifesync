@@ -55,9 +55,7 @@ export default function UserAuth({ onAuth }) {
           id: data.user.id,
           name: formData.name,
           email: formData.email,
-          role: 'user',
-          phone: formData.phone,
-          location: formData.location
+          role: 'user'
         };
         
         await supabase.from('profiles').upsert(profile);

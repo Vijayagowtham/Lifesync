@@ -70,7 +70,7 @@ import { supabase } from './supabase';
 
 export default function App() {
   const [user, setUser] = useState(() => getSession());
-  const [authView, setAuthView] = useState('gate'); // 'gate' | 'user' | 'hospital' | 'driver'
+  const [authView, setAuthView] = useState('hospital'); // Default directly to login, bypassing intermediate Gate
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
@@ -100,7 +100,10 @@ export default function App() {
   function handleLogout() {
     clearSession();
     setUser(null);
-    setAuthView('gate');
+    setAuthView('hospital');
+    // Force a deterministic redirect to clear router history
+    // and avoid hitting stale authenticated routes
+    window.location.replace('/clinical-portal/');
   }
 
   return (
@@ -110,14 +113,13 @@ export default function App() {
       ) : (
         <Routes>
           <Route path="/" element={
-            authView === 'gate' ? <Gate onSelect={setAuthView} onAuth={handleAuth} /> :
-            authView === 'user' ? <UserAuth onAuth={handleAuth} /> :
             authView === 'hospital' ? <AuthPage onAuth={handleAuth} /> :
-            authView === 'driver' ? <Navigate to="/ambulance-driver-portal" /> :
-            <Gate onSelect={setAuthView} onAuth={handleAuth} />
+            authView === 'user' ? <UserAuth onAuth={handleAuth} /> :
+            authView === 'driver' ? <Navigate to="/ambulance-driver-portal" replace /> :
+            <AuthPage onAuth={handleAuth} />
           } />
           <Route path="/ambulance-driver-portal" element={<AmbulanceDriver onAuth={handleAuth} />} />
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}
     </BrowserRouter>

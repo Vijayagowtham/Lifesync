@@ -241,11 +241,11 @@ export default function HospitalStatus({ hospitals, userLocation }: HospitalStat
                     <div>
                       <h4 className="text-lg font-bold text-slate-900 mb-4">Contact Information</h4>
                       <div className="flex flex-wrap gap-4">
-                        <Button variant="outline" className="rounded-xl border-slate-200 hover:bg-red-50 hover:text-primary hover:border-primary">
+                        <Button variant="outline" className="rounded-xl border-slate-200 hover:bg-red-50 hover:text-primary hover:border-primary" onClick={() => alert('Calling ' + selectedHospital.name + ' at ' + selectedHospital.contact)}>
                           <Phone className="w-4 h-4 mr-2" />
                           {selectedHospital.contact}
                         </Button>
-                        <Button variant="outline" className="rounded-xl border-slate-200 hover:bg-red-50 hover:text-primary hover:border-primary">
+                        <Button variant="outline" className="rounded-xl border-slate-200 hover:bg-red-50 hover:text-primary hover:border-primary" onClick={() => alert('Opening maps for directions to ' + selectedHospital.name)}>
                           <MapPin className="w-4 h-4 mr-2" />
                           Get Directions
                         </Button>
@@ -309,7 +309,7 @@ export default function HospitalStatus({ hospitals, userLocation }: HospitalStat
                   </div>
 
                   <div className="mt-12">
-                    <Button className="w-full py-6 rounded-2xl bg-primary hover:bg-primary/90 text-lg font-bold shadow-lg shadow-primary/20">
+                    <Button className="w-full py-6 rounded-2xl bg-primary hover:bg-primary/90 text-lg font-bold shadow-lg shadow-primary/20" onClick={() => alert('Emergency slot booked at ' + selectedHospital.name + '. Check your SMS.')}>
                       Book Emergency Appointment
                     </Button>
                   </div>

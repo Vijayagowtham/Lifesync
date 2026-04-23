@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '../supabase';
 import { 
   Activity, 
   Map as MapIcon, 
@@ -14,7 +15,11 @@ import {
   AlertTriangle,
   ShieldCheck,
   MapPin,
-  Bell
+  Bell,
+  PhoneCall,
+  CheckCircle2,
+  XCircle,
+  ArrowRight
 } from 'lucide-react';
 import MapView from '../components/ambulance/dashboard/MapView';
 
@@ -27,6 +32,7 @@ export default function UserDashboard({ user }) {
   const [chatVisible, setChatVisible] = useState(false);
   const [query, setQuery] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const [dispatchStatus, setDispatchStatus] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
 
   const triageChips = [
     "I have a severe headache",
@@ -38,8 +44,10 @@ export default function UserDashboard({ user }) {
   const fetchInsights = async (customQuery = null) => {
     setChatLoading(true);
     try {
-      const AI_URL = import.meta.env.VITE_AI_API_URL || 'http://127.0.0.1:5000/api';
-      const res = await fetch(`${AI_URL}/insights`, {
+      const AI_URL = import.meta.env.VITE_AI_API_URL || '/api';
+      const endpoint = `${AI_URL}/insights`;
+      console.log('[LifeSync Carebot] Fetching from:', endpoint);
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -48,13 +56,44 @@ export default function UserDashboard({ user }) {
           location: userLocation
         })
       });
+      if (!res.ok) {
+        console.error('[LifeSync Carebot] HTTP error:', res.status, res.statusText);
+        throw new Error(`HTTP ${res.status}`);
+      }
       const data = await res.json();
+      console.log('[LifeSync Carebot] Response received:', data);
       setAiInsight(data.insight);
       if (customQuery) setChatVisible(true);
     } catch (err) {
+      console.error('[LifeSync Carebot] Fetch failed:', err.message);
       setAiInsight('Environmental sensors active. System monitoring in progress.');
     } finally {
       setChatLoading(false);
+    }
+  };
+
+  // ── Emergency Dispatch ──
+  const dispatchEmergency = async () => {
+    if (dispatchStatus === 'sending' || dispatchStatus === 'sent') return;
+    setDispatchStatus('sending');
+    try {
+      const { error } = await supabase.from('ambulance_requests').insert({
+        user_id: null,
+        status: 'pending',
+        lat: userLocation[0],
+        lng: userLocation[1],
+        hospital_name: hospitals[0]?.name || 'Nearest Hospital',
+        driver_name: null,
+        contact: null,
+      });
+      if (error) throw error;
+      setDispatchStatus('sent');
+      // Reset after 5 seconds
+      setTimeout(() => setDispatchStatus('idle'), 5000);
+    } catch (err) {
+      console.error('Dispatch failed:', err);
+      setDispatchStatus('error');
+      setTimeout(() => setDispatchStatus('idle'), 4000);
     }
   };
 
@@ -153,6 +192,55 @@ export default function UserDashboard({ user }) {
                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nearby Facilities</div>
                     </motion.div>
                 </div>
+
+                {/* ── Emergency Dispatch SOS Card ── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.55 }}
+                  className="p-6 bg-white rounded-[28px] border border-red-100 shadow-lg flex items-center justify-between gap-6"
+                >
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Ambulance size={16} className="text-red-600" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Emergency Response</span>
+                    </div>
+                    <h4 className="font-black text-slate-900 text-base leading-tight">Need an Ambulance?</h4>
+                    <p className="text-xs text-slate-400 font-medium mt-0.5">Dispatch will receive your live GPS instantly.</p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: dispatchStatus === 'idle' ? 1.05 : 1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={dispatchEmergency}
+                    disabled={dispatchStatus === 'sending' || dispatchStatus === 'sent'}
+                    className={`relative flex-shrink-0 flex flex-col items-center justify-center w-20 h-20 rounded-[20px] font-black text-[10px] uppercase tracking-widest transition-all shadow-lg ${
+                      dispatchStatus === 'sent' ? 'bg-emerald-500 text-white' :
+                      dispatchStatus === 'error' ? 'bg-orange-500 text-white' :
+                      dispatchStatus === 'sending' ? 'bg-red-400 text-white' :
+                      'bg-red-600 text-white shadow-red-600/30 hover:shadow-red-600/50'
+                    }`}
+                  >
+                    {dispatchStatus === 'idle' && (
+                      <motion.div
+                        animate={{ scale: [1, 1.15, 1] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                        className="absolute inset-0 rounded-[20px] bg-red-500 opacity-30"
+                      />
+                    )}
+                    <span className="relative z-10">
+                      {dispatchStatus === 'sent' ? <CheckCircle2 size={28} /> :
+                       dispatchStatus === 'error' ? <XCircle size={28} /> :
+                       dispatchStatus === 'sending' ? <Loader2 size={28} className="animate-spin" /> :
+                       <PhoneCall size={28} />}
+                    </span>
+                    <span className="relative z-10 mt-1 text-[8px]">
+                      {dispatchStatus === 'sent' ? 'Sent!' :
+                       dispatchStatus === 'error' ? 'Retry' :
+                       dispatchStatus === 'sending' ? 'Sending' :
+                       'SOS'}
+                    </span>
+                  </motion.button>
+                </motion.div>
 
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}

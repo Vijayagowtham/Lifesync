@@ -259,14 +259,20 @@ export default function App() {
     fetchData();
   }, [userLocation, locationStatus]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    // Clear all possible session data
+    supabase.auth.signOut().catch(() => {}); // Fire and forget
     localStorage.removeItem("lifesync_auth");
     localStorage.removeItem("lifesync_profile");
+    localStorage.removeItem("hms_session");
+    localStorage.clear();
     sessionStorage.clear();
+    
+    // Reset local state
     setIsLoggedIn(false);
-    setUserLocation(null);
-    setLocationStatus("pending");
+    
+    // Hard redirect to the entry portal
+    window.location.href = "/clinical-portal/";
   };
 
   const handleProfileSave = async (updated: UserProfile) => {
@@ -307,13 +313,10 @@ export default function App() {
     );
   }
 
+  // Redirect to Unified Auth Gateway if not authenticated
   if (!isLoggedIn) {
-    return (
-      <>
-        <AuthPage onLogin={handleLogin} onOpenChat={() => setChatOpen(true)} />
-        <Chatbot hospitals={[]} isOpen={chatOpen} setIsOpen={setChatOpen} />
-      </>
-    );
+    window.location.href = "/clinical-portal/";
+    return null;
   }
 
   // Show location gate until granted

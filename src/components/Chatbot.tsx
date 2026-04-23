@@ -162,7 +162,7 @@ export default function Chatbot({ hospitals, isOpen: externalIsOpen, setIsOpen: 
       - If you don't know the answer, say "I'm sorry, I don't have that information. Please contact emergency services if this is an emergency."
       - Always prioritize emergency advice if the user seems to be in a life-threatening situation.`;
 
-      const model = "gemini-2.0-flash-lite";
+      const model = "gemini-1.5-flash";
       const response = await genAIRef.current.models.generateContent({
         model,
         contents: [

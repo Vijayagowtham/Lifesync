@@ -11,7 +11,7 @@ export default function Ambulance() {
   
   const [showAdd, setShowAdd] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [form, setForm] = useState({ vehicle_no: '', model: '', driver_name: '', driver_phone: '', status: 'Available' });
+  const [form, setForm] = useState({ id: '', vehicle_no: '', model: '', driver_name: '', driver_phone: '', status: 'Available' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -45,11 +45,12 @@ export default function Ambulance() {
       const { data: hosp, error: hospError } = await supabase.from('hospitals').select('id').limit(1).single();
       if (hospError) throw hospError;
       
+      if (!form.id) throw new Error('Vehicle ID is required (e.g. AMB-101)');
       const { error } = await supabase.from('ambulances').insert({ ...form, hospital_id: hosp?.id || null });
       if (error) throw error;
       
       setShowAdd(false);
-      setForm({ vehicle_no: '', model: '', driver_name: '', driver_phone: '', status: 'Available' });
+      setForm({ id: '', vehicle_no: '', model: '', driver_name: '', driver_phone: '', status: 'Available' });
     } catch (err) {
       alert("Error: " + (err.message || "Failed to save ambulance record."));
     } finally {
@@ -183,8 +184,12 @@ export default function Ambulance() {
 
       {/* Add Ambulance Modal */}
       <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Register Emergency Vehicle" size="lg"
-        footer={<><button className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button><button className="btn btn-primary" onClick={saveAmbulance} disabled={saving || !form.vehicle_no || !form.driver_name}><Save size={14} /> {saving ? 'Adding...' : 'Register Vehicle'}</button></>}>
+        footer={<><button className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button><button className="btn btn-primary" onClick={saveAmbulance} disabled={saving || !form.id || !form.vehicle_no || !form.driver_name}><Save size={14} /> {saving ? 'Adding...' : 'Register Vehicle'}</button></>}>
         <div className="form-grid">
+          <div className="form-group">
+            <label className="form-label">Unit ID * (e.g. AMB-101)</label>
+            <input value={form.id} onChange={e => setForm({ ...form, id: e.target.value })} placeholder="AMB-101" />
+          </div>
           <div className="form-group">
             <label className="form-label">Vehicle Registration No. *</label>
             <input value={form.vehicle_no} onChange={e => setForm({ ...form, vehicle_no: e.target.value })} placeholder="e.g. TN 01 AB 1234" />

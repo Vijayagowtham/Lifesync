@@ -92,11 +92,11 @@ export default function Dashboard({ hospitals, ambulances, userLocation, onOpenC
               {userLocation[0].toFixed(4)}, {userLocation[1].toFixed(4)}
             </Badge>
           )}
-          <Button variant="outline" className="rounded-xl">
+          <Button variant="outline" className="rounded-xl" onClick={() => alert('Time range filters will be implemented in the next update.')}>
             <Clock className="w-4 h-4 mr-2" />
             Last 24 Hours
           </Button>
-          <Button className="rounded-xl bg-primary hover:bg-primary/90">
+          <Button className="rounded-xl bg-primary hover:bg-primary/90" onClick={() => alert('Exporting health report to PDF...')}>
             Export Report
           </Button>
         </div>
@@ -242,7 +242,7 @@ export default function Dashboard({ hospitals, ambulances, userLocation, onOpenC
               </div>
               <p className="text-xs text-slate-600">All hospital databases are now synchronized.</p>
             </div>
-            <Button variant="ghost" className="w-full text-primary hover:text-primary hover:bg-red-50 rounded-xl text-sm font-bold">
+            <Button variant="ghost" className="w-full text-primary hover:text-primary hover:bg-red-50 rounded-xl text-sm font-bold" onClick={() => alert('Navigating to full alerts list...')}>
               View All Alerts
             </Button>
           </CardContent>
@@ -280,10 +280,10 @@ export default function Dashboard({ hospitals, ambulances, userLocation, onOpenC
               </div>
             </div>
             <div className="flex gap-3">
-              <Button className="flex-1 bg-white text-primary hover:bg-white/90 rounded-xl font-bold">
+              <Button className="flex-1 bg-white text-primary hover:bg-white/90 rounded-xl font-bold" onClick={() => alert('Appointment request submitted for LifeCare Specialist Clinic.')}>
                 Book Appointment
               </Button>
-              <Button variant="outline" className="bg-transparent border-white/30 hover:bg-white/10 text-white rounded-xl">
+              <Button variant="outline" className="bg-transparent border-white/30 hover:bg-white/10 text-white rounded-xl" onClick={() => alert('Calling LifeCare Specialist Clinic at +91 00000 00000...')}>
                 <Phone className="w-4 h-4" />
               </Button>
             </div>
@@ -294,7 +294,7 @@ export default function Dashboard({ hospitals, ambulances, userLocation, onOpenC
         <Card className="border-none shadow-sm rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-bold">Nearby Hospitals</CardTitle>
-            <Button variant="ghost" className="text-primary font-bold text-sm">View Map</Button>
+            <Button variant="ghost" className="text-primary font-bold text-sm" onClick={() => alert('Live Map navigation initiated.')}>View Map</Button>
           </CardHeader>
           <CardContent className="space-y-4">
             {sortedHospitals.slice(0, 3).map((hospital) => {

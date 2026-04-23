@@ -35,7 +35,6 @@ export default function AmbulancePanel({ ambulances, user }: AmbulancePanelProps
   useEffect(() => {
     if (!activeRequest?.id) return;
 
-    console.log(`[Supabase] Subscribing to request: ${activeRequest.id}`);
     
     const channel = supabase
       .channel(`request-${activeRequest.id}`)
@@ -48,7 +47,6 @@ export default function AmbulancePanel({ ambulances, user }: AmbulancePanelProps
           filter: `id=eq.${activeRequest.id}`,
         },
         (payload) => {
-          console.log('[Supabase] Real-time update received:', payload);
           const updated = payload.new as any;
           setActiveRequest(prev => {
             if (!prev) return null;
@@ -209,11 +207,11 @@ export default function AmbulancePanel({ ambulances, user }: AmbulancePanelProps
                   </div>
 
                   <div className="flex gap-3">
-                    <Button className="flex-1 bg-slate-900 text-white hover:bg-slate-800 rounded-xl font-bold">
+                    <Button className="flex-1 bg-slate-900 text-white hover:bg-slate-800 rounded-xl font-bold" onClick={() => alert('Opening live tracking map for Unit #' + ambulance.id)}>
                       <Navigation className="w-4 h-4 mr-2" />
                       Track Unit
                     </Button>
-                    <Button variant="outline" className="rounded-xl border-slate-200 hover:bg-red-50 hover:text-primary hover:border-primary">
+                    <Button variant="outline" className="rounded-xl border-slate-200 hover:bg-red-50 hover:text-primary hover:border-primary" onClick={() => alert('Calling driver ' + ambulance.driverName + '...')}>
                       <Phone className="w-4 h-4" />
                     </Button>
                   </div>
@@ -305,7 +303,7 @@ export default function AmbulancePanel({ ambulances, user }: AmbulancePanelProps
                     </div>
 
                     {activeRequest.status === 'accepted' || activeRequest.status === 'en-route' ? (
-                       <Button className="w-full bg-slate-900 text-white rounded-xl py-6 font-bold flex items-center justify-center gap-2">
+                       <Button className="w-full bg-slate-900 text-white rounded-xl py-6 font-bold flex items-center justify-center gap-2" onClick={() => alert('Switch to Live Map to track your emergency ambulance.')}>
                          <Navigation className="w-5 h-5" /> Live Tracking Active
                        </Button>
                     ) : (

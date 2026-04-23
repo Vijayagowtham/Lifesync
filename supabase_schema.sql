@@ -17,9 +17,14 @@ DROP TABLE IF EXISTS public.hospitals CASCADE;
 -- Profiles: Managed by auth triggers
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+  username TEXT,
   name TEXT,
   email TEXT,
   role TEXT DEFAULT 'user', -- 'user' | 'hospital' | 'doctor' | 'driver'
+  age INTEGER,
+  blood_group TEXT,
+  phone TEXT,
+  location TEXT,
   avatar_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -231,13 +236,18 @@ USING (public.get_role(auth.uid()) IN ('hospital', 'driver'));
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, name, email, role, avatar_url)
+  INSERT INTO public.profiles (id, username, name, email, role, age, blood_group, phone, location, avatar_url)
   VALUES (
     new.id,
-    COALESCE(new.raw_user_meta_data->>'hospitalName', split_part(new.email, '@', 1)),
+    new.raw_user_meta_data->>'username',
+    COALESCE(new.raw_user_meta_data->>'name', new.raw_user_meta_data->>'hospitalName', split_part(new.email, '@', 1)),
     new.email,
     COALESCE(new.raw_user_meta_data->>'role', 'user'),
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=' || new.email
+    (new.raw_user_meta_data->>'age')::INTEGER,
+    new.raw_user_meta_data->>'bloodGroup',
+    new.raw_user_meta_data->>'phone',
+    new.raw_user_meta_data->>'location',
+    COALESCE(new.raw_user_meta_data->>'avatar_url', 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || new.email)
   );
   RETURN new;
 END;

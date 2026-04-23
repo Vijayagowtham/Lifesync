@@ -11,11 +11,14 @@ import Availability from './pages/Availability';
 import Analytics from './pages/Analytics';
 import Ambulance from './pages/Ambulance';
 import AmbulanceDriver from './pages/AmbulanceDriver';
-import AuthPage, { getSession, clearSession } from './pages/AuthPage';
-import Gate from './pages/Gate';
-import UserAuth from './pages/UserAuth';
+import AuthPage from './pages/AuthPage'; // Kept for history if needed
+import LoginUI, { getSession, clearSession } from './pages/LoginUI';
+import ProtectedRoute from './components/ProtectedRoute';
 
-import UserDashboard from './pages/UserDashboard';
+function ExternalRedirect({ to }) {
+  window.location.href = to;
+  return null;
+}
 
 function AppShell({ user, onLogout }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -43,15 +46,32 @@ function AppShell({ user, onLogout }) {
         )}
         <div className={isDriverPage || isPatient ? '' : 'page-wrapper'}>
           <Routes>
-            <Route index element={isPatient ? <UserDashboard user={user} /> : <Home />} />
-            <Route path="/hospital" element={<HospitalDetails />} />
-            <Route path="/doctors" element={<Doctors />} />
-            <Route path="/patients" element={<Patients />} />
-            <Route path="/appointments" element={<Appointments />} />
-            <Route path="/availability" element={<Availability />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/ambulance" element={<Ambulance />} />
+            {/* Hospital Management Dashboard */}
+            <Route 
+              path="/hospital-dashboard" 
+              element={
+                <ProtectedRoute user={user} allowedRoles={['hospital']}>
+                  <Home />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Hospital Only Routes */}
+            <Route path="/hospital" element={<ProtectedRoute user={user} allowedRoles={['hospital']}><HospitalDetails /></ProtectedRoute>} />
+            <Route path="/doctors" element={<ProtectedRoute user={user} allowedRoles={['hospital']}><Doctors /></ProtectedRoute>} />
+            <Route path="/patients" element={<ProtectedRoute user={user} allowedRoles={['hospital']}><Patients /></ProtectedRoute>} />
+            <Route path="/appointments" element={<ProtectedRoute user={user} allowedRoles={['hospital']}><Appointments /></ProtectedRoute>} />
+            <Route path="/availability" element={<ProtectedRoute user={user} allowedRoles={['hospital']}><Availability /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute user={user} allowedRoles={['hospital']}><Analytics /></ProtectedRoute>} />
+            <Route path="/ambulance" element={<ProtectedRoute user={user} allowedRoles={['hospital']}><Ambulance /></ProtectedRoute>} />
+            
+            {/* Driver Routes */}
             <Route path="/ambulance-driver" element={<AmbulanceDriver />} />
+
+            {/* Redirect index path (/) based on role */}
+            <Route path="/" element={user?.role === 'user' ? <ExternalRedirect to="/" /> : <Navigate to="/hospital-dashboard" replace />} />
+
+            {/* 404 Route */}
             <Route path="*" element={
               <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)' }}>
                 <div style={{ fontSize: '4rem', fontWeight: 800, color: 'var(--primary)', fontFamily: 'var(--font-heading)' }}>404</div>
@@ -112,12 +132,7 @@ export default function App() {
         <AppShell user={user} onLogout={handleLogout} />
       ) : (
         <Routes>
-          <Route path="/" element={
-            authView === 'hospital' ? <AuthPage onAuth={handleAuth} /> :
-            authView === 'user' ? <UserAuth onAuth={handleAuth} /> :
-            authView === 'driver' ? <Navigate to="/ambulance-driver-portal" replace /> :
-            <AuthPage onAuth={handleAuth} />
-          } />
+          <Route path="/" element={<LoginUI onAuth={handleAuth} />} />
           <Route path="/ambulance-driver-portal" element={<AmbulanceDriver onAuth={handleAuth} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

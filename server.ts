@@ -132,7 +132,6 @@ async function startServer() {
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
     }
-    console.log(`${req.method} ${req.url}`);
     next();
   });
 
@@ -155,7 +154,6 @@ async function startServer() {
 
       // 2. If DB is empty, fetch from Overpass and seed the DB
       if (!dbHospitals || dbHospitals.length === 0) {
-        console.log("[Supabase] Registry empty. Fetching from Overpass...");
         const realHospitals = await fetchRealHospitals(lat, lng);
         
         if (realHospitals && realHospitals.length > 0) {

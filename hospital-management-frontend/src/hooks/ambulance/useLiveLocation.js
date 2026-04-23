@@ -5,18 +5,6 @@ export const useLiveLocation = (onPositionUpdate) => {
   const [error, setError] = useState(null);
   const watchIdRef = useRef(null);
 
-  // Mock server sync
-  const lastSyncRef = useRef(0);
-
-  const syncToBackend = (pos) => {
-    const now = Date.now();
-    // Throttle mock backend sync to every 5 seconds
-    if (now - lastSyncRef.current > 5000) {
-      console.log(`[Backend Sync]: Updating location to { lat: ${pos.lat}, lng: ${pos.lng} }`);
-      lastSyncRef.current = now;
-    }
-  };
-
   const handleSuccess = useCallback((pos) => {
     setStatus('granted');
     setError(null);
@@ -25,10 +13,6 @@ export const useLiveLocation = (onPositionUpdate) => {
     if (onPositionUpdate) {
       onPositionUpdate(newPos);
     }
-    
-    // Bonus Feature: Mock pushing to backend API
-    syncToBackend(newPos);
-    
   }, [onPositionUpdate]);
 
   const handleError = useCallback((err) => {

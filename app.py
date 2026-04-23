@@ -9,7 +9,7 @@ from supabase import create_client, Client
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}})
 
 # Credentials
 GOOGLE_API_KEY = os.getenv("VITE_GEMINI_API_KEY") 
@@ -85,4 +85,4 @@ def get_insights():
         return jsonify({"error": f"Failed to process insights: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -63,6 +63,7 @@ export default function AuthPage({ onLogin, onOpenChat }: AuthPageProps) {
     if (onOpenChat) onOpenChat();
   };
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -80,8 +81,14 @@ export default function AuthPage({ onLogin, onOpenChat }: AuthPageProps) {
           password: formData.password,
           options: {
             data: {
-              name: formData.name || formData.username,
+              name: role === "hospital" ? formData.hospitalName : (formData.name || formData.username),
+              username: formData.username,
               role: role,
+              hospitalName: formData.hospitalName,
+              phone: formData.phone,
+              location: formData.location,
+              age: formData.age,
+              bloodGroup: formData.bloodGroup
             }
           }
         });
@@ -92,9 +99,11 @@ export default function AuthPage({ onLogin, onOpenChat }: AuthPageProps) {
         // Manual profile update (Trigger might also handle this, but for robustness we ensure role)
         await supabase.from('profiles').upsert({
           id: authData.user.id,
-          name: formData.name || formData.username,
+          username: formData.username,
+          name: role === "hospital" ? formData.hospitalName : (formData.name || formData.username),
           email: formData.email,
           role: role,
+          age: formData.age ? parseInt(formData.age) : null,
           blood_group: formData.bloodGroup,
           phone: formData.phone,
           location: formData.location
